@@ -1,183 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Scan — System Prof Elect</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f0f2f5; }
-        .navbar {
-            background: #1a1a2e;
-            color: white;
-            padding: 16px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .navbar h1 { font-size: 18px; }
-        .navbar a { color: #aaa; text-decoration: none; font-size: 14px; }
-        .navbar a:hover { color: white; }
-        .container { padding: 32px; max-width: 700px; margin: 0 auto; }
-        .back { display: inline-block; margin-bottom: 16px; color: #666; text-decoration: none; font-size: 14px; }
-        .back:hover { color: #1a1a2e; }
-        h2 { color: #1a1a2e; margin-bottom: 24px; }
+{% extends "base.html" %}
+{% block title %}Scan — System Prof Elect{% endblock %}
 
-        .camera-box {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-            padding: 24px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        video {
-            width: 100%;
-            max-width: 500px;
-            border-radius: 8px;
-            background: #000;
-        }
-        canvas { display: none; }
-        .scan-btn {
-            margin-top: 16px;
-            padding: 12px 40px;
-            background: #1a1a2e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .scan-btn:hover { background: #16213e; }
-        .scan-btn:disabled { background: #aaa; cursor: not-allowed; }
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/scan.css">
+{% endblock %}
 
-        /* Result box */
-        .result { border-radius: 10px; padding: 24px; display: none; }
-        .result.match {
-            background: #e0ffe0;
-            border: 2px solid #27ae60;
-        }
-        .result.no-match {
-            background: #ffe0e0;
-            border: 2px solid #c0392b;
-        }
-        .result.no-face {
-            background: #fff8e0;
-            border: 2px solid #f39c12;
-        }
-        .result-inner { display: flex; gap: 20px; align-items: center; }
-        .result img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #27ae60;
-        }
-        .result-info h3 { font-size: 20px; color: #1a1a2e; margin-bottom: 6px; }
-        .result-info p { color: #555; font-size: 14px; margin-bottom: 4px; }
-        .result-info .status-tag {
-            display: inline-block;
-            background: #27ae60;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            margin-top: 8px;
-        }
-        .error-msg { font-size: 16px; color: #c0392b; font-weight: bold; }
-        .warning-msg { font-size: 16px; color: #f39c12; font-weight: bold; }
-        .loading { color: #666; margin-top: 12px; font-size: 14px; display: none; }
-    </style>
-</head>
-<body>
-    <div class="navbar">
-        <h1>⚡ System Prof Elect</h1>
-        <a href="/logout">Logout</a>
+{% block content %}
+<a href="/" class="back-link">← Back to Dashboard</a>
+<div class="page-header">
+    <h2>Scan Senior Face</h2>
+    <p>Position the senior citizen in front of the camera and click Scan</p>
+</div>
+
+<div class="scan-wrapper">
+    <div class="card camera-card">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <br>
+        <button class="btn btn-primary scan-btn" id="scanBtn" onclick="scanFace()">Scan Face</button>
+        <p class="loading" id="loading">Analyzing face, please wait...</p>
     </div>
 
-    <div class="container">
-        <a href="/" class="back">← Back to Dashboard</a>
-        <h2>📷 Scan Senior Face</h2>
-
-        <div class="camera-box">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
-            <br>
-            <button class="scan-btn" id="scanBtn" onclick="scanFace()">Scan Face</button>
-            <p class="loading" id="loading">⏳ Analyzing face, please wait...</p>
-        </div>
-
-        <!-- Result -->
-        <div class="result" id="result">
-            <div id="result-content"></div>
-        </div>
+    <div class="result" id="result">
+        <div id="result-content"></div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        // Start camera
-        const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { alert('Camera access denied. Please allow camera access.'); });
+{% block scripts %}
+<script>
+    const video = document.getElementById('video');
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(() => { alert('Camera access denied. Please allow camera access.'); });
 
-        async function scanFace() {
-            const btn = document.getElementById('scanBtn');
-            const loading = document.getElementById('loading');
-            const resultBox = document.getElementById('result');
-            const resultContent = document.getElementById('result-content');
+    async function scanFace() {
+        const btn = document.getElementById('scanBtn');
+        const loading = document.getElementById('loading');
+        const resultBox = document.getElementById('result');
+        const resultContent = document.getElementById('result-content');
 
-            // Capture frame from video
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg');
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg');
 
-            // Show loading
-            btn.disabled = true;
-            loading.style.display = 'block';
-            resultBox.style.display = 'none';
+        btn.disabled = true;
+        loading.style.display = 'block';
+        resultBox.style.display = 'none';
 
-            try {
-                const response = await fetch('/recognize', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: imageData })
-                });
-                const data = await response.json();
+        try {
+            const response = await fetch('/recognize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+            const data = await response.json();
 
-                loading.style.display = 'none';
-                btn.disabled = false;
-                resultBox.style.display = 'block';
+            loading.style.display = 'none';
+            btn.disabled = false;
+            resultBox.style.display = 'block';
 
-                if (data.status === 'match') {
-                    resultBox.className = 'result match';
-                    resultContent.innerHTML = `
-                        <div class="result-inner">
-                            <img src="/${data.photo}" alt="${data.name}" />
-                            <div class="result-info">
-                                <h3>✅ ${data.name}</h3>
-                                <p>Age: ${data.age}</p>
-                                <p>Address: ${data.address}</p>
-                                <span class="status-tag">💰 Money Released — ₱500.00</span>
-                            </div>
+            if (data.status === 'match') {
+                resultBox.className = 'result result-match';
+                resultContent.innerHTML = `
+                    <div class="result-inner">
+                        <img src="/${data.photo}" alt="${data.name}" />
+                        <div class="result-info">
+                            <h3>Match Found — ${data.name}</h3>
+                            <p>Age: ${data.age}</p>
+                            <p>${data.address}</p>
+                            <span class="release-tag">Money Released — ₱500.00</span>
                         </div>
-                    `;
-                } else if (data.status === 'no_match') {
-                    resultBox.className = 'result no-match';
-                    resultContent.innerHTML = `<p class="error-msg">❌ ${data.message}</p>`;
-                } else {
-                    resultBox.className = 'result no-face';
-                    resultContent.innerHTML = `<p class="warning-msg">⚠️ ${data.message}</p>`;
-                }
-
-            } catch (err) {
-                loading.style.display = 'none';
-                btn.disabled = false;
-                resultBox.style.display = 'block';
-                resultBox.className = 'result no-match';
-                resultContent.innerHTML = `<p class="error-msg">❌ Something went wrong. Please try again.</p>`;
+                    </div>`;
+            } else if (data.status === 'no_match') {
+                resultBox.className = 'result result-nomatch';
+                resultContent.innerHTML = `<p class="error-msg">No Match — ${data.message}</p>`;
+            } else {
+                resultBox.className = 'result result-noface';
+                resultContent.innerHTML = `<p class="warning-msg">No Face Detected — ${data.message}</p>`;
             }
+        } catch (err) {
+            loading.style.display = 'none';
+            btn.disabled = false;
+            resultBox.style.display = 'block';
+            resultBox.className = 'result result-nomatch';
+            resultContent.innerHTML = `<p class="error-msg">Something went wrong. Please try again.</p>`;
         }
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}

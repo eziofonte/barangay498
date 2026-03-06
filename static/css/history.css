@@ -1,0 +1,54 @@
+/* ============================================================
+   history.css — Transaction History Page Styles
+   ============================================================ */
+
+.filters {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 180px;
+}
+
+.filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.filter-group input {
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.filter-group input:focus {
+    outline: none;
+    border-color: #1a56a0;
+    box-shadow: 0 0 0 3px rgba(26,86,160,0.1);
+}
+
+.total-bar {
+    padding: 14px 16px;
+    text-align: right;
+    font-size: 14px;
+    color: #718096;
+    border-top: 1px solid #f7fafc;
+    background: #f7fafc;
+}
+
+.total-bar strong { color: #1a365d; }
