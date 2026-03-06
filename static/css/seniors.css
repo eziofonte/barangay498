@@ -1,0 +1,40 @@
+/* ============================================================
+   seniors.css — View All Seniors Page Styles
+   ============================================================ */
+
+.seniors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.senior-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.senior-card:hover { transform: translateY(-2px); }
+
+.senior-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.senior-card-info { padding: 16px; }
+
+.senior-card-info h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a365d;
+    margin-bottom: 4px;
+}
+
+.senior-card-info p {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 2px;
+}
