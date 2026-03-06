@@ -6,6 +6,15 @@
 {% endblock %}
 
 {% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 <a href="/" class="back-link">← Back to Dashboard</a>
 <div class="top-bar">
     <div class="page-header" style="margin-bottom:0">
@@ -24,14 +33,15 @@
             <h3>{{ senior.full_name }}</h3>
             <p>Age: {{ senior.age }}</p>
             <p>{{ senior.address }}</p>
+            <div class="card-actions">
+                <a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
+                <form method="POST" action="/seniors/{{ senior.id }}/delete" onsubmit="return confirm('Remove {{ senior.full_name }} from the system?')">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}
-</div>
-{% else %}
-<div class="empty-state">
-    <!-- Replace with: <img src="/static/img/icons/empty-icon.png" alt="No data"> -->
-    <p>No seniors registered yet. <a href="/register-senior">Register one now!</a></p>
 </div>
 {% endif %}
 {% endblock %}

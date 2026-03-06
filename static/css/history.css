@@ -52,3 +52,41 @@
 }
 
 .total-bar strong { color: #1a365d; }
+
+.btn-reset {
+    background: #fff8f0;
+    color: #c05621;
+    border: 2px solid #fbd38d;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-reset:hover {
+    background: #c05621;
+    color: white;
+}
+
+.btn-reset-all {
+    background: #fff5f5;
+    color: #c53030;
+    border: 2px solid #feb2b2;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    margin-bottom: 16px;
+}
+
+.btn-reset-all:hover {
+    background: #c53030;
+    color: white;
+}

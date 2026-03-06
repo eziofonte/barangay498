@@ -1,9 +1,86 @@
-/* ============================================================
-   register.css — Register Senior Page Styles
-   ============================================================ */
+/* --- Photo Toggle --- */
+.photo-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
 
-.form-wrapper { max-width: 600px; }
+.toggle-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #718096;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
 
+.toggle-btn.active {
+    border-color: #1a56a0;
+    color: #1a56a0;
+    background: #ebf4ff;
+}
+
+/* --- Side by side layout when camera is active --- */
+.register-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    transition: all 0.3s;
+}
+
+.form-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.camera-section {
+    flex: 1.2;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.camera-section.visible {
+    display: flex;
+}
+
+/* --- Camera Preview --- */
+.camera-preview {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+}
+
+.camera-preview video,
+.camera-preview img#capturedPhoto {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    display: block;
+}
+
+.camera-preview canvas {
+    display: none;
+}
+
+.camera-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.camera-controls .btn {
+    flex: 1;
+    text-align: center;
+}
+
+/* --- Upload Preview --- */
 .preview {
     width: 100%;
     height: 220px;
@@ -26,7 +103,6 @@
     object-fit: cover;
 }
 
-/* Placeholder icon inside preview box */
 .preview .preview-placeholder {
     display: flex;
     flex-direction: column;
@@ -34,20 +110,65 @@
     gap: 8px;
 }
 
-.preview .preview-placeholder img {
-    width: 40px;
-    height: 40px;
-    opacity: 0.3;
-}
-
 .preview .preview-placeholder p {
     color: #a0aec0;
     font-size: 14px;
 }
 
-.form-wrapper .btn {
+.form-wrapper .btn-submit {
     width: 100%;
     text-align: center;
     padding: 12px;
     font-size: 15px;
+}
+
+/* --- Age Input --- */
+.age-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border 0.2s;
+}
+
+.age-input-wrapper:focus-within {
+    border-color: #1a56a0;
+    box-shadow: 0 0 0 3px rgba(26,86,160,0.1);
+}
+
+.age-btn {
+    width: 52px;
+    height: 46px;
+    background: #ebf4ff;
+    border: none;
+    color: #1a56a0;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.age-btn:hover { background: #bfdbfe; }
+
+.age-input-wrapper input {
+    border: none;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    flex: 1;
+    box-shadow: none !important;
+}
+
+.age-input-wrapper input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Hide default browser arrows */
+.age-input-wrapper input::-webkit-outer-spin-button,
+.age-input-wrapper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
 }
