@@ -6,8 +6,17 @@
 {% endblock %}
 
 {% block content %}
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="flash-success" style="margin-bottom:20px;">{{ messages[0] }}</div>
+    {% endif %}
+{% endwith %}
+
 <a href="/" class="back-link">← Back to Dashboard</a>
-<div class="page-header">
+<form method="POST" action="/transactions/reset-all" style="display:inline;"
+      onsubmit="return confirm('Reset ALL claims? Every senior will be able to claim again.')">
+    <button type="submit" class="btn-reset-all">Reset All Claims</button>
+</form><div class="page-header">
     <h2>Transaction History</h2>
     <p>All money release records</p>
 </div>
@@ -42,6 +51,7 @@
                 <th>Released By</th>
                 <th>Date & Time</th>
                 <th>Status</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -55,6 +65,11 @@
                 <td>{{ t.released_by }}</td>
                 <td>{{ t.date_released.strftime('%b %d, %Y %I:%M %p') }}</td>
                 <td><span class="badge badge-green">{{ t.status }}</span></td>
+                <td>
+                    <form method="POST" action="{{ url_for('reset_claim', transaction_id=t.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Are you sure you want to reset this claim?')">Reset Claim</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

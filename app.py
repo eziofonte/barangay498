@@ -65,29 +65,74 @@ def logout():
 @login_required
 def register_senior():
     if request.method == 'POST':
+        import base64, uuid
+        from PIL import Image as PILImage
+        from io import BytesIO as BytesIO2
+
         full_name = request.form.get('full_name')
         age = request.form.get('age')
         address = request.form.get('address')
         photo = request.files.get('photo')
+        captured_photo = request.form.get('captured_photo')
 
-        if photo and allowed_file(photo.filename):
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+        photo_path = None
+
+        # Camera capture mode
+        if captured_photo and captured_photo.startswith('data:image'):
+            image_data = captured_photo.split(',')[1]
+            image_bytes = base64.b64decode(image_data)
+            filename = f"capture_{uuid.uuid4().hex}.jpg"
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            with open(photo_path, 'wb') as f:
+                f.write(image_bytes)
+
+        # Upload mode
+        elif photo and allowed_file(photo.filename):
             filename = secure_filename(photo.filename)
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
             photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             photo.save(photo_path)
 
-            senior = Senior(
-                full_name=full_name,
-                age=age,
-                address=address,
-                photo_path=photo_path
-            )
-            db.session.add(senior)
-            db.session.commit()
-            flash('Senior registered successfully!')
-            return redirect(url_for('index'))
         else:
-            flash('Please upload a valid photo (jpg, jpeg, png)')
+            flash('Please provide a photo — either upload one or use the camera.')
+            return render_template('register_senior.html')
+
+        # Check if face already exists in the system
+        seniors = Senior.query.all()
+        for existing_senior in seniors:
+            try:
+                known_image = face_recognition.load_image_file(existing_senior.photo_path)
+                known_encodings = face_recognition.face_encodings(known_image)
+                if not known_encodings:
+                    continue
+
+                new_image = face_recognition.load_image_file(photo_path)
+                new_encodings = face_recognition.face_encodings(new_image)
+                if not new_encodings:
+                    continue
+
+                distance = face_recognition.face_distance([known_encodings[0]], new_encodings[0])[0]
+                results = face_recognition.compare_faces([known_encodings[0]], new_encodings[0], tolerance=0.4)
+
+                if results[0] and distance < 0.4:
+                    os.remove(photo_path)
+                    flash(f'This person is already registered as {existing_senior.full_name}.')
+                    return render_template('register_senior.html')
+            except Exception:
+                continue
+
+        # All checks passed — save senior
+        senior = Senior(
+            full_name=full_name,
+            age=age,
+            address=address,
+            photo_path=photo_path
+        )
+        db.session.add(senior)
+        db.session.commit()
+        flash('Senior registered successfully!')
+        return redirect(url_for('index'))
 
     return render_template('register_senior.html')
 
@@ -108,20 +153,19 @@ def scan():
 @app.route('/recognize', methods=['POST'])
 @login_required
 def recognize():
+    from datetime import datetime, timedelta
     data = request.get_json()
     image_data = data['image'].split(',')[1]
     image_bytes = base64.b64decode(image_data)
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
     frame = np.array(image)
 
-    # Get face locations and encodings from camera frame
     face_locations = face_recognition.face_locations(frame)
     face_encodings = face_recognition.face_encodings(frame, face_locations)
 
     if not face_encodings:
         return {'status': 'no_face', 'message': 'No face detected. Please try again.'}
 
-    # Load all registered seniors and their face encodings
     seniors = Senior.query.all()
     for senior in seniors:
         try:
@@ -131,13 +175,25 @@ def recognize():
                 continue
             known_encoding = known_encodings[0]
 
-            # Compare with camera face
-            results = face_recognition.compare_faces([known_encoding], face_encodings[0], tolerance=0.5)
-            if results[0]:
-                # Match found — record transaction
+            distance = face_recognition.face_distance([known_encoding], face_encodings[0])[0]
+            results = face_recognition.compare_faces([known_encoding], face_encodings[0], tolerance=0.4)
+
+            if results[0] and distance < 0.4:
+                now = datetime.now()
+                cutoff = now - timedelta(days=90)
+                already_claimed = Transaction.query.filter_by(senior_id=senior.id).filter(
+                    Transaction.date_released >= cutoff
+                ).first()
+
+                if already_claimed:
+                    return {
+                        'status': 'already_claimed',
+                        'message': f'{senior.full_name} has already claimed on {already_claimed.date_released.strftime("%b %d, %Y")}. Next claim available after {(already_claimed.date_released + timedelta(days=90)).strftime("%b %d, %Y")}.'
+                    }
+
                 transaction = Transaction(
                     senior_id=senior.id,
-                    amount=500.00,
+                    amount=1500.00,
                     released_by=current_user.name,
                     status='Released'
                 )
@@ -180,6 +236,60 @@ def history():
 
     transactions = query.order_by(Transaction.date_released.desc()).all()
     return render_template('history.html', transactions=transactions, search=search, date_filter=date_filter)
+
+# --- Edit Senior ---
+@app.route('/seniors/<int:senior_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_senior(senior_id):
+    senior = Senior.query.get_or_404(senior_id)
+    if request.method == 'POST':
+        senior.full_name = request.form.get('full_name')
+        senior.age = request.form.get('age')
+        senior.address = request.form.get('address')
+
+        photo = request.files.get('photo')
+        if photo and allowed_file(photo.filename):
+            filename = secure_filename(photo.filename)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+            senior.photo_path = photo_path
+
+        db.session.commit()
+        flash('Senior updated successfully!')
+        return redirect(url_for('seniors'))
+
+    return render_template('edit_senior.html', senior=senior)
+
+# --- Delete Senior ---
+@app.route('/seniors/<int:senior_id>/delete', methods=['POST'])
+@login_required
+def delete_senior(senior_id):
+    senior = Senior.query.get_or_404(senior_id)
+    Transaction.query.filter_by(senior_id=senior.id).delete()
+    db.session.delete(senior)
+    db.session.commit()
+    flash('Senior removed from the system.', 'info')
+    return redirect(url_for('seniors'))
+
+# --- Reset Senior Claim ---
+@app.route('/transactions/<int:transaction_id>/reset', methods=['POST'])
+@login_required
+def reset_claim(transaction_id):
+    transaction = Transaction.query.get_or_404(transaction_id)
+    db.session.delete(transaction)
+    db.session.commit()
+    flash('Claim reset successfully. Senior can now claim again.')
+    return redirect(url_for('history'))
+
+# --- Reset All Claims ---
+@app.route('/transactions/reset-all', methods=['POST'])
+@login_required
+def reset_all_claims():
+    Transaction.query.delete()
+    db.session.commit()
+    flash('All claims have been reset. All seniors can now claim again.')
+    return redirect(url_for('history'))
 
 if __name__ == '__main__':
     app.run(debug=True)

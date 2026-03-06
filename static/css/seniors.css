@@ -38,3 +38,31 @@
     color: #718096;
     margin-bottom: 2px;
 }
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+.btn-danger {
+    background: #fff5f5;
+    color: #c53030;
+    border: 2px solid #feb2b2;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-danger:hover {
+    background: #c53030;
+    color: white;
+}
