@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register Senior — System Prof Elect</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        .navbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 { font-size: 18px; }
+        .navbar a { color: #aaa; text-decoration: none; font-size: 14px; }
+        .navbar a:hover { color: white; }
+        .container { padding: 32px; max-width: 600px; margin: 0 auto; }
+        h2 { margin-bottom: 24px; color: #1a1a2e; }
+        .form-box {
+            background: white;
+            padding: 32px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #333;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .preview {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .preview img {
+            max-height: 200px;
+            display: none;
+        }
+        .preview p { color: #aaa; font-size: 14px; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover { background: #16213e; }
+        .back { display: inline-block; margin-bottom: 16px; color: #666; text-decoration: none; font-size: 14px; }
+        .back:hover { color: #1a1a2e; }
+        .error {
+            background: #ffe0e0;
+            color: #c0392b;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .success {
+            background: #e0ffe0;
+            color: #27ae60;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>⚡ System Prof Elect</h1>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back">← Back to Dashboard</a>
+        <h2>Register New Senior</h2>
+
+        <div class="form-box">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="error">{{ messages[0] }}</div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" enctype="multipart/form-data">
+                <label>Full Name</label>
+                <input type="text" name="full_name" placeholder="e.g. Juan Dela Cruz" required />
+
+                <label>Age</label>
+                <input type="number" name="age" placeholder="e.g. 65" required />
+
+                <label>Address</label>
+                <input type="text" name="address" placeholder="e.g. 123 Rizal St., Barangay..." required />
+
+                <label>Face Photo</label>
+                <div class="preview" id="preview">
+                    <p id="preview-text">Photo preview will appear here</p>
+                    <img id="preview-img" src="" alt="preview" />
+                </div>
+                <input type="file" name="photo" id="photo" accept="image/*" required />
+
+                <button type="submit">Register Senior</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('photo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.getElementById('preview-text').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>

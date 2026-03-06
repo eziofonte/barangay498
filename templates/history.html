@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>History — System Prof Elect</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        .navbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 { font-size: 18px; }
+        .navbar a { color: #aaa; text-decoration: none; font-size: 14px; }
+        .navbar a:hover { color: white; }
+        .container { padding: 32px; }
+        .back { display: inline-block; margin-bottom: 16px; color: #666; text-decoration: none; font-size: 14px; }
+        .back:hover { color: #1a1a2e; }
+        .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .top h2 { color: #1a1a2e; }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+        .filter-group label { font-size: 13px; font-weight: bold; color: #333; }
+        .filter-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .filter-btn {
+            padding: 10px 24px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            height: 40px;
+        }
+        .filter-btn:hover { background: #16213e; }
+        .clear-btn {
+            padding: 10px 16px;
+            background: white;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            height: 40px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+        .clear-btn:hover { background: #f5f5f5; }
+
+        /* Table */
+        .table-box {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #1a1a2e; color: white; }
+        thead th { padding: 14px 16px; text-align: left; font-size: 14px; }
+        tbody tr { border-bottom: 1px solid #f0f0f0; }
+        tbody tr:hover { background: #f9f9f9; }
+        tbody td { padding: 14px 16px; font-size: 14px; color: #333; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #e0ffe0;
+            color: #27ae60;
+        }
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #aaa;
+            font-size: 16px;
+        }
+        .total {
+            padding: 16px;
+            text-align: right;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #f0f0f0;
+        }
+        .total span { font-weight: bold; color: #1a1a2e; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>⚡ System Prof Elect</h1>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="container">
+        <a href="/" class="back">← Back to Dashboard</a>
+        <div class="top">
+            <h2>📋 Transaction History</h2>
+        </div>
+
+        <!-- Filters -->
+        <form method="GET" action="/history">
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Search by Senior Name</label>
+                    <input type="text" name="search" placeholder="e.g. Juan Dela Cruz" value="{{ search }}" />
+                </div>
+                <div class="filter-group">
+                    <label>Filter by Date</label>
+                    <input type="date" name="date" value="{{ date_filter }}" />
+                </div>
+                <button type="submit" class="filter-btn">Search</button>
+                <a href="/history" class="clear-btn">Clear</a>
+            </div>
+        </form>
+
+        <!-- Table -->
+        <div class="table-box">
+            {% if transactions %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Senior Name</th>
+                        <th>Age</th>
+                        <th>Address</th>
+                        <th>Amount</th>
+                        <th>Released By</th>
+                        <th>Date & Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ t.senior.full_name }}</td>
+                        <td>{{ t.senior.age }}</td>
+                        <td>{{ t.senior.address }}</td>
+                        <td>₱{{ "%.2f"|format(t.amount) }}</td>
+                        <td>{{ t.released_by }}</td>
+                        <td>{{ t.date_released.strftime('%b %d, %Y %I:%M %p') }}</td>
+                        <td><span class="badge">{{ t.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="total">
+                Total Transactions: <span>{{ transactions|length }}</span> &nbsp;|&nbsp;
+                Total Amount Released: <span>₱{{ "%.2f"|format(transactions|sum(attribute='amount')) }}</span>
+            </div>
+            {% else %}
+            <div class="empty">
+                No transactions found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
