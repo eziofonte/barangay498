@@ -15,13 +15,18 @@
     {% endif %}
 {% endwith %}
 
-<a href="/" class="back-link">← Back to Dashboard</a>
 <div class="top-bar">
     <div class="page-header" style="margin-bottom:0">
         <h2>Registered Seniors</h2>
         <p>{{ seniors|length }} senior citizen(s) enrolled</p>
     </div>
     <a href="/register-senior" class="btn btn-primary">+ Register New</a>
+</div>
+
+<div style="margin-bottom:20px;">
+    <form method="POST" action="/transactions/reset-all" onsubmit="return confirm('Reset ALL claims? This cannot be undone.')">
+        <button type="submit" class="btn btn-danger btn-sm">Reset All Claims</button>
+    </form>
 </div>
 
 {% if seniors %}
@@ -35,6 +40,9 @@
             <p>{{ senior.address }}</p>
             <div class="card-actions">
                 <a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
+                <form method="POST" action="/seniors/{{ senior.id }}/reset-claim" onsubmit="return confirm('Reset claim for {{ senior.full_name }}?')">
+                    <button type="submit" class="btn btn-warning btn-sm">Reset Claim</button>
+                </form>
                 <form method="POST" action="/seniors/{{ senior.id }}/delete" onsubmit="return confirm('Remove {{ senior.full_name }} from the system?')">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                 </form>

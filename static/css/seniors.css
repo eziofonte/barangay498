@@ -45,6 +45,24 @@
     margin-top: 12px;
 }
 
+.card-actions .btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 13px;
+}
+
+.card-actions form {
+    flex: 1;
+    display: flex;
+}
+
+.card-actions .btn-outline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .btn-sm {
     padding: 6px 14px;
     font-size: 13px;
@@ -65,4 +83,9 @@
 .btn-danger:hover {
     background: #c53030;
     color: white;
+}
+
+.card-actions .btn {
+    flex: 1;
+    text-align: center;
 }
