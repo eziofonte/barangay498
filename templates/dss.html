@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}DSS — System Prof Elect{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/dss.css">
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">← Back to Dashboard</a>
+<div class="page-header">
+    <h2>Decision Support System</h2>
+    <p>Data overview and insights for barangay officials</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="dss-grid">
+    <div class="dss-card">
+        <p class="dss-label">Total Seniors</p>
+        <h3 class="dss-number">{{ total_seniors }}</h3>
+    </div>
+    <div class="dss-card">
+        <p class="dss-label">Claimed (Last 90 Days)</p>
+        <h3 class="dss-number clr-green">{{ claimed_count }}</h3>
+    </div>
+    <div class="dss-card">
+        <p class="dss-label">Unclaimed</p>
+        <h3 class="dss-number clr-red">{{ unclaimed_count }}</h3>
+    </div>
+    <div class="dss-card">
+        <p class="dss-label">Total Amount Released</p>
+        <h3 class="dss-number clr-blue">₱{{ "%.2f"|format(total_released) }}</h3>
+    </div>
+    <div class="dss-card">
+        <p class="dss-label">Total Transactions</p>
+        <h3 class="dss-number">{{ total_transactions }}</h3>
+    </div>
+    <div class="dss-card">
+        <p class="dss-label">Claim Rate</p>
+        <h3 class="dss-number clr-blue">
+            {% if total_seniors > 0 %}
+                {{ "%.1f"|format((claimed_count / total_seniors) * 100) }}%
+            {% else %}
+                0%
+            {% endif %}
+        </h3>
+    </div>
+</div>
+
+<!-- Insights -->
+<div class="dss-section">
+    <h3 class="dss-section-title">Insights & Recommendations</h3>
+    <div class="insights-list">
+        {% for insight in insights %}
+        <div class="insight-item">
+            <div class="insight-dot"></div>
+            <p>{{ insight }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Unclaimed Seniors -->
+<div class="dss-section">
+    <h3 class="dss-section-title">Unclaimed Seniors</h3>
+    <p class="dss-section-sub">Seniors who have not claimed in the last 90 days</p>
+
+    <div class="table-wrapper">
+        {% if unclaimed_seniors %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Full Name</th>
+                    <th>Age</th>
+                    <th>Address</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for senior in unclaimed_seniors %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ senior.full_name }}</strong></td>
+                    <td>{{ senior.age }}</td>
+                    <td>{{ senior.address }}</td>
+                    <td><a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">All seniors have claimed their allowance.</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

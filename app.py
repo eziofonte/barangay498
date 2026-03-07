@@ -1,14 +1,16 @@
 import face_recognition
 import numpy as np
 import base64
+import uuid as uuid_module
+import os
 from io import BytesIO
 from PIL import Image
-import os
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from models import db, Official, Senior, Transaction
+from blink import detect_blink as check_blink
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -28,14 +30,6 @@ def allowed_file(filename):
 @login_manager.user_loader
 def load_user(user_id):
     return Official.query.get(int(user_id))
-
-# --- Home ---
-@app.route('/')
-@login_required
-def index():
-    senior_count = Senior.query.count()
-    transaction_count = Transaction.query.count()
-    return render_template('index.html', senior_count=senior_count, transaction_count=transaction_count)
 
 # --- Login ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -149,21 +143,30 @@ def seniors():
 def scan():
     return render_template('scan.html')
 
+# --- Generate Reference Number ---
+def generate_reference():
+    from datetime import datetime
+    now = datetime.now()
+    unique = uuid_module.uuid4().hex[:6].upper()
+    return f"BRY-{now.strftime('%Y%m%d')}-{unique}"
+
 # --- Face Recognition API ---
 @app.route('/recognize', methods=['POST'])
 @login_required
 def recognize():
     from datetime import datetime, timedelta
+
     data = request.get_json()
-    image_data = data['image'].split(',')[1]
-    image_bytes = base64.b64decode(image_data)
-    image = Image.open(BytesIO(image_bytes)).convert('RGB')
-    frame = np.array(image)
+    image_data = data.get('image')
 
-    face_locations = face_recognition.face_locations(frame)
-    face_encodings = face_recognition.face_encodings(frame, face_locations)
+    if not image_data or not image_data.startswith('data:image'):
+        return {'status': 'no_face', 'message': 'Invalid image data'}
 
-    if not face_encodings:
+    image_bytes = base64.b64decode(image_data.split(',')[1])
+    new_image = face_recognition.load_image_file(BytesIO(image_bytes))
+    new_encodings = face_recognition.face_encodings(new_image)
+
+    if not new_encodings:
         return {'status': 'no_face', 'message': 'No face detected. Please try again.'}
 
     seniors = Senior.query.all()
@@ -173,44 +176,49 @@ def recognize():
             known_encodings = face_recognition.face_encodings(known_image)
             if not known_encodings:
                 continue
-            known_encoding = known_encodings[0]
 
-            distance = face_recognition.face_distance([known_encoding], face_encodings[0])[0]
-            results = face_recognition.compare_faces([known_encoding], face_encodings[0], tolerance=0.4)
+            distance = face_recognition.face_distance([known_encodings[0]], new_encodings[0])[0]
+            results = face_recognition.compare_faces([known_encodings[0]], new_encodings[0], tolerance=0.4)
 
             if results[0] and distance < 0.4:
-                now = datetime.now()
-                cutoff = now - timedelta(days=90)
-                already_claimed = Transaction.query.filter_by(senior_id=senior.id).filter(
-                    Transaction.date_released >= cutoff
+                # 90-day cooldown check
+                cutoff = datetime.now() - timedelta(days=90)
+                recent = Transaction.query.filter_by(senior_id=senior.id).filter(
+                    Transaction.date_released >= cutoff,
+                    Transaction.status == 'Released'
                 ).first()
 
-                if already_claimed:
+                if recent:
+                    next_date = recent.date_released + timedelta(days=90)
                     return {
                         'status': 'already_claimed',
-                        'message': f'{senior.full_name} has already claimed on {already_claimed.date_released.strftime("%b %d, %Y")}. Next claim available after {(already_claimed.date_released + timedelta(days=90)).strftime("%b %d, %Y")}.'
+                        'message': f'Already claimed on {recent.date_released.strftime("%B %d, %Y")}. Next eligible: {next_date.strftime("%B %d, %Y")}'
                     }
 
+                # Create pending transaction
                 transaction = Transaction(
+                    reference_number=generate_reference(),
                     senior_id=senior.id,
                     amount=1500.00,
                     released_by=current_user.name,
-                    status='Released'
+                    status='Pending'
                 )
                 db.session.add(transaction)
                 db.session.commit()
 
                 return {
                     'status': 'match',
+                    'transaction_id': transaction.id,
+                    'reference_number': transaction.reference_number,
                     'name': senior.full_name,
                     'age': senior.age,
                     'address': senior.address,
                     'photo': senior.photo_path
                 }
-        except Exception as e:
+        except Exception:
             continue
 
-    return {'status': 'no_match', 'message': 'Face not recognized. Senior not found.'}
+    return {'status': 'no_match', 'message': 'No matching senior found.'}
 
 # --- Transaction History ---
 @app.route('/history')
@@ -286,10 +294,162 @@ def reset_claim(transaction_id):
 @app.route('/transactions/reset-all', methods=['POST'])
 @login_required
 def reset_all_claims():
-    Transaction.query.delete()
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(days=90)
+    transactions = Transaction.query.filter(
+        Transaction.date_released >= cutoff,
+        Transaction.status == 'Released'
+    ).all()
+    for t in transactions:
+        t.status = 'Reset'
     db.session.commit()
     flash('All claims have been reset. All seniors can now claim again.')
-    return redirect(url_for('history'))
+    return redirect(url_for('seniors'))
+
+# --- DSS Page ---
+@app.route('/')
+@login_required
+def index():
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    cutoff = now - timedelta(days=90)
+
+    senior_count = Senior.query.count()
+    transaction_count = Transaction.query.count()
+    total_released = db.session.query(db.func.sum(Transaction.amount)).scalar() or 0
+
+    claimed_ids = db.session.query(Transaction.senior_id).filter(
+        Transaction.date_released >= cutoff
+    ).distinct().all()
+    claimed_ids = [c[0] for c in claimed_ids]
+    claimed_count = len(claimed_ids)
+    unclaimed_count = senior_count - claimed_count
+
+    unclaimed_seniors = Senior.query.filter(
+        ~Senior.id.in_(claimed_ids)
+    ).all() if claimed_ids else Senior.query.all()
+
+    insights = []
+    if unclaimed_count > 0:
+        insights.append(f'{unclaimed_count} senior(s) have not claimed their allowance in the last 90 days.')
+    if unclaimed_count == 0 and senior_count > 0:
+        insights.append('All registered seniors have claimed their allowance. Great job!')
+    if senior_count == 0:
+        insights.append('No seniors are registered yet. Start by registering senior citizens.')
+    if claimed_count > 0 and unclaimed_count > 0:
+        rate = (claimed_count / senior_count) * 100
+        insights.append(f'Current claim rate is {rate:.1f}%. Consider reaching out to unclaimed seniors.')
+
+    return render_template('index.html',
+        senior_count=senior_count,
+        transaction_count=transaction_count,
+        total_released=total_released,
+        claimed_count=claimed_count,
+        unclaimed_count=unclaimed_count,
+        unclaimed_seniors=unclaimed_seniors,
+        insights=insights,
+        now=now
+    )
+
+    # Insights
+    insights = []
+    if unclaimed_count > 0:
+        insights.append(f'{unclaimed_count} senior(s) have not claimed their allowance in the last 90 days.')
+    if unclaimed_count == 0 and total_seniors > 0:
+        insights.append('All registered seniors have claimed their allowance. Great job!')
+    if total_seniors == 0:
+        insights.append('No seniors are registered yet. Start by registering senior citizens.')
+    if claimed_count > 0 and unclaimed_count > 0:
+        rate = (claimed_count / total_seniors) * 100
+        insights.append(f'Current claim rate is {rate:.1f}%. Consider reaching out to unclaimed seniors.')
+    if last_transaction:
+        days_since = (now - last_transaction.date_released).days
+        if days_since > 30:
+            insights.append(f'No transactions in the last {days_since} days. Is a new release period coming up?')
+
+    return render_template('dss.html',
+        total_seniors=total_seniors,
+        total_released=total_released,
+        total_transactions=total_transactions,
+        claimed_count=claimed_count,
+        unclaimed_count=unclaimed_count,
+        unclaimed_seniors=unclaimed_seniors,
+        insights=insights,
+        now=now
+    )
+
+@app.route('/confirm-release', methods=['POST'])
+@login_required
+def confirm_release():
+    import base64, uuid as uuid_lib
+    data = request.get_json()
+    transaction_id = data.get('transaction_id')
+    signature_data = data.get('signature')
+    release_photo_data = data.get('release_photo')
+
+    transaction = Transaction.query.get_or_404(transaction_id)
+
+    os.makedirs('static/signatures', exist_ok=True)
+    os.makedirs('static/release_photos', exist_ok=True)
+
+    # Save signature
+    if signature_data and signature_data.startswith('data:image'):
+        sig_bytes = base64.b64decode(signature_data.split(',')[1])
+        sig_filename = f"sig_{uuid_lib.uuid4().hex}.png"
+        sig_path = os.path.join('static/signatures', sig_filename)
+        with open(sig_path, 'wb') as f:
+            f.write(sig_bytes)
+        transaction.signature_path = sig_path
+
+    # Save release photo
+    if release_photo_data and release_photo_data.startswith('data:image'):
+        photo_bytes = base64.b64decode(release_photo_data.split(',')[1])
+        photo_filename = f"release_{uuid_lib.uuid4().hex}.jpg"
+        photo_path = os.path.join('static/release_photos', photo_filename)
+        with open(photo_path, 'wb') as f:
+            f.write(photo_bytes)
+        transaction.release_photo_path = photo_path
+
+    transaction.status = 'Released'
+    db.session.commit()
+
+    return {'status': 'success', 'reference_number': transaction.reference_number}
+
+# --- Reset Individual Senior Claim ---
+@app.route('/seniors/<int:senior_id>/reset-claim', methods=['POST'])
+@login_required
+def reset_senior_claim(senior_id):
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(days=90)
+    Transaction.query.filter_by(senior_id=senior_id).filter(
+        Transaction.date_released >= cutoff,
+        Transaction.status == 'Released'
+    ).delete()
+    db.session.commit()
+    senior = Senior.query.get_or_404(senior_id)
+    flash(f'Claim reset for {senior.full_name}. They can now claim again.')
+    return redirect(url_for('seniors'))
+
+# --- Blink Detection ---
+# --- Blink Detection ---
+@app.route('/detect-blink', methods=['POST'])
+@login_required
+def detect_blink_route():
+    data = request.get_json()
+    image_data = data.get('image')
+    reset = data.get('reset', False)
+
+    if reset:
+        from blink import reset_blink_counter
+        reset_blink_counter()
+        return {'blink': False, 'face': False}
+
+    if not image_data or not image_data.startswith('data:image'):
+        return {'blink': False, 'face': False}
+
+    image_bytes = base64.b64decode(image_data.split(',')[1])
+    result = check_blink(image_bytes)
+    return result
 
 if __name__ == '__main__':
     app.run(debug=True)

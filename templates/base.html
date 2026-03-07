@@ -8,29 +8,66 @@
     {% block extra_styles %}{% endblock %}
 </head>
 <body>
-    <div class="navbar">
-        <div class="navbar-brand">
-            <!-- Replace logo-placeholder with: <img class="brand-logo" src="/static/img/logo.png" alt="Logo"> -->
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <!-- Replace with: <img src="/static/img/logo.png" class="topbar-logo" alt="Logo"> -->
             <div class="logo-placeholder">LOGO</div>
-            <div>
+            <div class="topbar-title">
                 <h1>System Prof Elect</h1>
                 <p>Barangay Senior Citizens Management</p>
             </div>
         </div>
         {% if current_user.is_authenticated %}
-        <div class="navbar-right">
-            <div class="user-info">
-                <!-- Replace avatar-placeholder with: <img src="/static/img/avatar.png" alt="User"> -->
-                <div class="avatar-placeholder">USER</div>
-                <span>{{ current_user.name }}</span>
-            </div>
-            <a href="/logout">Logout</a>
+        <div class="topbar-right">
+            <div class="avatar-placeholder">USER</div>
+            <span>{{ current_user.name }}</span>
         </div>
         {% endif %}
     </div>
 
-    <div class="container">
-        {% block content %}{% endblock %}
+    <div class="layout">
+
+        <!-- Sidebar -->
+        {% if current_user.is_authenticated %}
+        <aside class="sidebar">
+            <nav>
+                <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/scan" class="nav-item {% if request.path == '/scan' %}active{% endif %}">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>Scan Face</span>
+                </a>
+                <a href="/seniors" class="nav-item {% if request.path == '/seniors' %}active{% endif %}">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>Seniors</span>
+                </a>
+                <a href="/register-senior" class="nav-item {% if request.path == '/register-senior' %}active{% endif %}">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>Register Senior</span>
+                </a>
+                <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>History</span>
+                </a>
+            </nav>
+            <div class="sidebar-bottom">
+                <a href="/logout" class="nav-item logout">
+                    <div class="nav-icon-placeholder"></div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
     </div>
 
     {% block scripts %}{% endblock %}
