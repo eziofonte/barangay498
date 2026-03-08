@@ -1,0 +1,14 @@
+New-Item .gitignore -ItemType File
+```
+
+Then open it in VSCode and add:
+```
+dist/
+build/
+*.spec
+__pycache__/
+*.pyc
+instance/
+static/faces/
+static/signatures/
+static/release_photos/
