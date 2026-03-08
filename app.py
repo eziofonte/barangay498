@@ -1,5 +1,5 @@
-from fileinput import filename
 import json
+import time as _time
 import face_recognition
 import numpy as np
 import base64
@@ -12,16 +12,19 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
+from fileinput import filename
 from models import db, Official, Senior, Transaction
 from blink import detect_blink as check_blink
 from datetime import datetime, timedelta
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['STARTUP_TIME'] = str(_time.time())
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['UPLOAD_FOLDER'] = 'static/faces'
 app.config['PERMANENT_SESSION_LIFETIME'] = 900
+app.config['SESSION_PERMANENT'] = False
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -42,6 +45,10 @@ def check_session_timeout():
     if request.path.startswith('/static'):
         return
     if current_user.is_authenticated:
+        if session.get('startup_time') != app.config.get('STARTUP_TIME'):
+            logout_user()
+            session.clear()
+            return redirect(url_for('login'))
         last_active = session.get('last_active')
         if last_active:
             last_active_dt = datetime.fromisoformat(last_active)
@@ -75,7 +82,8 @@ def login():
                 official.failed_attempts = 0
                 official.locked_until = None
                 db.session.commit()
-                login_user(official)
+                login_user(official, remember=False)
+                session['startup_time'] = app.config.get('STARTUP_TIME')
                 return redirect(url_for('index'))
             else:
                 # Increment failed attempts
