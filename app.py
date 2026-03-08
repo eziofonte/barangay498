@@ -1,3 +1,5 @@
+import json
+
 import face_recognition
 import numpy as np
 import base64
@@ -96,18 +98,23 @@ def register_senior():
         seniors = Senior.query.all()
         for existing_senior in seniors:
             try:
-                known_image = face_recognition.load_image_file(existing_senior.photo_path)
-                known_encodings = face_recognition.face_encodings(known_image)
-                if not known_encodings:
-                    continue
+                if existing_senior.face_encoding:
+                    import json
+                    known_encoding = np.array(json.loads(existing_senior.face_encoding))
+                else:
+                    known_image = face_recognition.load_image_file(existing_senior.photo_path)
+                    known_encodings = face_recognition.face_encodings(known_image)
+                    if not known_encodings:
+                        continue
+                    known_encoding = known_encodings[0]
 
                 new_image = face_recognition.load_image_file(photo_path)
                 new_encodings = face_recognition.face_encodings(new_image)
                 if not new_encodings:
                     continue
 
-                distance = face_recognition.face_distance([known_encodings[0]], new_encodings[0])[0]
-                results = face_recognition.compare_faces([known_encodings[0]], new_encodings[0], tolerance=0.4)
+                distance = face_recognition.face_distance([known_encoding], new_encodings[0])[0]
+                results = face_recognition.compare_faces([known_encoding], new_encodings[0], tolerance=0.4)
 
                 if results[0] and distance < 0.4:
                     os.remove(photo_path)
@@ -125,6 +132,7 @@ def register_senior():
         )
         db.session.add(senior)
         db.session.commit()
+        compute_and_save_encoding(senior)
         flash('Senior registered successfully!')
         return redirect(url_for('index'))
 
@@ -149,6 +157,17 @@ def generate_reference():
     now = datetime.now()
     unique = uuid_module.uuid4().hex[:6].upper()
     return f"BRY-{now.strftime('%Y%m%d')}-{unique}"
+
+def compute_and_save_encoding(senior):
+    try:
+        image = face_recognition.load_image_file(senior.photo_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            import json
+            senior.face_encoding = json.dumps(encodings[0].tolist())
+            db.session.commit()
+    except Exception:
+        pass
 
 # --- Face Recognition API ---
 @app.route('/recognize', methods=['POST'])
@@ -264,6 +283,8 @@ def edit_senior(senior_id):
             senior.photo_path = photo_path
 
         db.session.commit()
+        if photo and allowed_file(photo.filename):
+            compute_and_save_encoding(senior)
         flash('Senior updated successfully!')
         return redirect(url_for('seniors'))
 
@@ -357,8 +378,6 @@ def index():
         insights.append(f'{unclaimed_count} senior(s) have not claimed their allowance in the last 90 days.')
     if unclaimed_count == 0 and total_seniors > 0:
         insights.append('All registered seniors have claimed their allowance. Great job!')
-    if total_seniors == 0:
-        insights.append('No seniors are registered yet. Start by registering senior citizens.')
     if claimed_count > 0 and unclaimed_count > 0:
         rate = (claimed_count / total_seniors) * 100
         insights.append(f'Current claim rate is {rate:.1f}%. Consider reaching out to unclaimed seniors.')
@@ -368,7 +387,6 @@ def index():
             insights.append(f'No transactions in the last {days_since} days. Is a new release period coming up?')
 
     return render_template('dss.html',
-        total_seniors=total_seniors,
         total_released=total_released,
         total_transactions=total_transactions,
         claimed_count=claimed_count,
@@ -389,14 +407,16 @@ def confirm_release():
 
     transaction = Transaction.query.get_or_404(transaction_id)
 
-    os.makedirs('static/signatures', exist_ok=True)
-    os.makedirs('static/release_photos', exist_ok=True)
+    sig_path = 'static/signatures/' + sig_filename
+    photo_path = 'static/release_photos/' + photo_filename
 
     # Save signature
     if signature_data and signature_data.startswith('data:image'):
         sig_bytes = base64.b64decode(signature_data.split(',')[1])
-        sig_filename = f"sig_{uuid_lib.uuid4().hex}.png"
-        sig_path = os.path.join('static/signatures', sig_filename)
+        senior_name = transaction.senior.full_name.replace(' ', '_')
+        ref = transaction.reference_number
+        sig_filename = f"{senior_name}_{ref}_signature.png"
+        sig_path = 'static/signatures/' + sig_filename
         with open(sig_path, 'wb') as f:
             f.write(sig_bytes)
         transaction.signature_path = sig_path
@@ -404,8 +424,8 @@ def confirm_release():
     # Save release photo
     if release_photo_data and release_photo_data.startswith('data:image'):
         photo_bytes = base64.b64decode(release_photo_data.split(',')[1])
-        photo_filename = f"release_{uuid_lib.uuid4().hex}.jpg"
-        photo_path = os.path.join('static/release_photos', photo_filename)
+        photo_filename = f"{senior_name}_{ref}_release.jpg"
+        photo_path = 'static/release_photos/' + photo_filename
         with open(photo_path, 'wb') as f:
             f.write(photo_bytes)
         transaction.release_photo_path = photo_path
@@ -451,5 +471,18 @@ def detect_blink_route():
     result = check_blink(image_bytes)
     return result
 
+@app.route('/fix-paths')
+@login_required
+def fix_paths():
+    transactions = Transaction.query.all()
+    for t in transactions:
+        if t.release_photo_path:
+            t.release_photo_path = t.release_photo_path.replace('\\', '/')
+        if t.signature_path:
+            t.signature_path = t.signature_path.replace('\\', '/')
+    db.session.commit()
+    return {'status': 'fixed'}
+
 if __name__ == '__main__':
     app.run(debug=True)
+
