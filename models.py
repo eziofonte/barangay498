@@ -17,8 +17,8 @@ class Senior(db.Model):
     full_name = db.Column(db.String(150), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     address = db.Column(db.String(300), nullable=False)
-    photo_path = db.Column(db.String(300), nullable=False)  # path to their face photo
-    transactions = db.relationship('Transaction', backref='senior', lazy=True)
+    photo_path = db.Column(db.String(300), nullable=False)
+    face_encoding = db.Column(db.Text, nullable=True)
 
 # --- Transaction (record of money received) ---
 class Transaction(db.Model):
@@ -31,3 +31,4 @@ class Transaction(db.Model):
     status = db.Column(db.String(50), default='Released')
     signature_path = db.Column(db.String(300), nullable=True)
     release_photo_path = db.Column(db.String(300), nullable=True)
+    senior = db.relationship('Senior', backref='transactions')
