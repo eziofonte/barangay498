@@ -71,5 +71,28 @@
     </div>
 
     {% block scripts %}{% endblock %}
+
+{% if current_user.is_authenticated %}
+<script>
+    let inactivityTimer;
+    const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+    function resetTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+            window.location.href = '/logout?reason=timeout';
+        }, TIMEOUT_MS);
+    }
+
+    // Reset timer on any user activity
+    ['mousemove', 'mousedown', 'keypress', 'touchstart', 'click', 'scroll'].forEach(event => {
+        document.addEventListener(event, resetTimer);
+    });
+
+    // Start the timer immediately
+    resetTimer();
+</script>
+{% endif %}
+
 </body>
 </html>

@@ -5,11 +5,13 @@ from datetime import datetime
 db = SQLAlchemy()
 
 # --- Barangay Official (the one who logs in) ---
-class Official(UserMixin, db.Model):
+class Official(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    password = db.Column(db.String(300), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    failed_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
 
 # --- Senior Citizen ---
 class Senior(db.Model):
