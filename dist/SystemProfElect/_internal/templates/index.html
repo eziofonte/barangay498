@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — System Prof Elect{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+<link rel="stylesheet" href="/static/css/dss.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Welcome, {{ current_user.name }}</h2>
+    <p>Here is today's overview — {{ now.strftime('%B %d, %Y') }}</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-info">
+            <h3>{{ senior_count }}</h3>
+            <p>Registered Seniors</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-info">
+            <h3>{{ claimed_count }}</h3>
+            <p>Claimed (Last 90 Days)</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-info">
+            <h3 class="clr-red">{{ unclaimed_count }}</h3>
+            <p>Unclaimed</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-info">
+            <h3 class="clr-blue">₱{{ "%.2f"|format(total_released) }}</h3>
+            <p>Total Released</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="actions-grid">
+    <a href="/scan" class="action-card">
+        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <h3>Scan Senior Face</h3>
+        <p>Verify identity and release money</p>
+    </a>
+    <a href="/register-senior" class="action-card">
+        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <h3>Register New Senior</h3>
+        <p>Enroll a new senior citizen</p>
+    </a>
+    <a href="/seniors" class="action-card">
+        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <h3>View All Seniors</h3>
+        <p>Browse registered senior citizens</p>
+    </a>
+    <a href="/history" class="action-card">
+        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <h3>Transaction History</h3>
+        <p>View all money release records</p>
+    </a>
+</div>
+
+<!-- DSS Insights -->
+<div class="dss-section" style="margin-top:32px;">
+    <h3 class="dss-section-title">Insights & Recommendations</h3>
+    <div class="insights-list">
+        {% for insight in insights %}
+        <div class="insight-item">
+            <div class="insight-dot"></div>
+            <p>{{ insight }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Unclaimed Seniors -->
+{% if unclaimed_seniors %}
+<div class="dss-section" style="margin-top:32px;">
+    <h3 class="dss-section-title">Unclaimed Seniors</h3>
+    <p class="dss-section-sub">Seniors who have not claimed in the last 90 days</p>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Full Name</th>
+                    <th>Age</th>
+                    <th>Address</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for senior in unclaimed_seniors %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ senior.full_name }}</strong></td>
+                    <td>{{ senior.age }}</td>
+                    <td>{{ senior.address }}</td>
+                    <td><a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

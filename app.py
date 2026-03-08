@@ -1,3 +1,4 @@
+from fileinput import filename
 import json
 import face_recognition
 import numpy as np
@@ -38,11 +39,13 @@ def load_user(user_id):
 
 @app.before_request
 def check_session_timeout():
+    if request.path.startswith('/static'):
+        return
     if current_user.is_authenticated:
         last_active = session.get('last_active')
         if last_active:
             last_active_dt = datetime.fromisoformat(last_active)
-            if datetime.now() - last_active_dt > timedelta(seconds=15):
+            if datetime.now() - last_active_dt > timedelta(minutes=15):
                 logout_user()
                 session.clear()
                 flash('Your session has expired due to inactivity. Please log in again.')
@@ -220,8 +223,6 @@ def compute_and_save_encoding(senior):
 @app.route('/recognize', methods=['POST'])
 @login_required
 def recognize():
-    from datetime import datetime, timedelta
-
     data = request.get_json()
     image_data = data.get('image')
 
@@ -238,16 +239,13 @@ def recognize():
     seniors = Senior.query.all()
     for senior in seniors:
         try:
-            known_image = face_recognition.load_image_file(senior.photo_path)
-            known_encodings = face_recognition.face_encodings(known_image)
-            if not known_encodings:
+            if not senior.face_encoding:
                 continue
-
-            distance = face_recognition.face_distance([known_encodings[0]], new_encodings[0])[0]
-            results = face_recognition.compare_faces([known_encodings[0]], new_encodings[0], tolerance=0.4)
+            known_encoding = np.array(json.loads(senior.face_encoding))
+            distance = face_recognition.face_distance([known_encoding], new_encodings[0])[0]
+            results = face_recognition.compare_faces([known_encoding], new_encodings[0], tolerance=0.4)
 
             if results[0] and distance < 0.4:
-                # 90-day cooldown check
                 cutoff = datetime.now() - timedelta(days=90)
                 recent = Transaction.query.filter_by(senior_id=senior.id).filter(
                     Transaction.date_released >= cutoff,
@@ -261,7 +259,6 @@ def recognize():
                         'message': f'Already claimed on {recent.date_released.strftime("%B %d, %Y")}. Next eligible: {next_date.strftime("%B %d, %Y")}'
                     }
 
-                # Create pending transaction
                 transaction = Transaction(
                     reference_number=generate_reference(),
                     senior_id=senior.id,
@@ -279,9 +276,10 @@ def recognize():
                     'name': senior.full_name,
                     'age': senior.age,
                     'address': senior.address,
-                    'photo': senior.photo_path
+                    'photo': senior.photo_path.replace('\\', '/')
                 }
-        except Exception:
+        except Exception as e:
+            print(f"Recognition error: {e}")
             continue
 
     return {'status': 'no_match', 'message': 'No matching senior found.'}
@@ -325,7 +323,7 @@ def edit_senior(senior_id):
         if photo and allowed_file(photo.filename):
             filename = secure_filename(photo.filename)
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename).replace('\\', '/')
             photo.save(photo_path)
             senior.photo_path = photo_path
 
@@ -419,30 +417,6 @@ def index():
         now=now
     )
 
-    # Insights
-    insights = []
-    if unclaimed_count > 0:
-        insights.append(f'{unclaimed_count} senior(s) have not claimed their allowance in the last 90 days.')
-    if unclaimed_count == 0 and total_seniors > 0:
-        insights.append('All registered seniors have claimed their allowance. Great job!')
-    if claimed_count > 0 and unclaimed_count > 0:
-        rate = (claimed_count / total_seniors) * 100
-        insights.append(f'Current claim rate is {rate:.1f}%. Consider reaching out to unclaimed seniors.')
-    if last_transaction:
-        days_since = (now - last_transaction.date_released).days
-        if days_since > 30:
-            insights.append(f'No transactions in the last {days_since} days. Is a new release period coming up?')
-
-    return render_template('dss.html',
-        total_released=total_released,
-        total_transactions=total_transactions,
-        claimed_count=claimed_count,
-        unclaimed_count=unclaimed_count,
-        unclaimed_seniors=unclaimed_seniors,
-        insights=insights,
-        now=now
-    )
-
 @app.route('/confirm-release', methods=['POST'])
 @login_required
 def confirm_release():
@@ -517,6 +491,11 @@ def detect_blink_route():
     result = check_blink(image_bytes)
     return result
 
+@app.route('/debug-senior-paths')
+@login_required
+def debug_senior_paths():
+    seniors = Senior.query.all()
+    return {s.full_name: s.photo_path for s in seniors}
+
 if __name__ == '__main__':
     app.run(debug=True)
-

@@ -1,0 +1,286 @@
+/* ============================================================
+   scan.css — Scan Senior Face Page Styles
+   ============================================================ */
+
+.scan-wrapper {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.camera-card {
+    text-align: center;
+    padding: 28px;
+}
+
+video {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 10px;
+    background: #000;
+}
+
+canvas { display: none; }
+
+.scan-btn {
+    margin-top: 18px;
+    padding: 14px 48px;
+    font-size: 16px;
+}
+
+.scan-btn:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+}
+
+/* --- Loading Spinner --- */
+.loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #ebf4ff;
+    border-top: 4px solid #1a56a0;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading p {
+    color: #718096;
+    font-size: 15px;
+}
+
+/* --- Scan Results --- */
+.result {
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+    display: none;
+}
+
+.result-match   { background: #f0fff4; border: 2px solid #9ae6b4; }
+.result-nomatch { background: #fff5f5; border: 2px solid #feb2b2; }
+.result-noface  { background: #fffbeb; border: 2px solid #fcd34d; }
+.result-already { background: #fff5f5; border: 2px solid #fed7d7; }
+
+.result-inner {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.result-inner img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #9ae6b4;
+    flex-shrink: 0;
+}
+
+.result-info h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 6px;
+}
+
+.result-info p {
+    font-size: 15px;
+    color: #4a5568;
+    margin-bottom: 4px;
+}
+
+.release-tag {
+    display: inline-block;
+    background: #276749;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.error-msg   { font-size: 17px; font-weight: 600; color: #c53030; }
+.warning-msg { font-size: 17px; font-weight: 600; color: #b7791f; }
+
+/* --- Confirmation Screen --- */
+.confirmation-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+}
+
+.confirmation-overlay.visible {
+    display: flex;
+}
+
+.confirmation-box {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.confirmation-box .confirm-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #9ae6b4;
+    margin-bottom: 16px;
+}
+
+.confirmation-box h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 6px;
+}
+
+.confirmation-box p {
+    font-size: 15px;
+    color: #718096;
+    margin-bottom: 4px;
+}
+
+.confirm-amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: #276749;
+    margin: 16px 0;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.confirm-actions .btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    font-size: 15px;
+}
+
+.btn-confirm {
+    background: #276749;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-confirm:hover { background: #1f4f38; }
+
+.countdown {
+    font-size: 13px;
+    color: #a0aec0;
+    margin-top: 12px;
+}
+
+/* --- Confirmation Box additions --- */
+.ref-number {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 12px;
+}
+
+.section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+/* --- Release Photo --- */
+.release-photo-section {
+    margin: 16px 0;
+    text-align: left;
+}
+
+.release-photo-section video,
+.release-photo-section img#releaseCaptured {
+    width: 100%;
+    border-radius: 8px;
+    max-height: 180px;
+    object-fit: cover;
+}
+
+/* --- Signature Pad --- */
+.signature-section {
+    margin: 16px 0;
+    text-align: left;
+}
+
+.signature-canvas {
+    width: 100%;
+    height: 150px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f7fafc;
+    cursor: crosshair;
+    display: block;
+}
+
+.btn-confirm {
+    background: #276749;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-confirm:hover { background: #1f4f38; }
+
+/* --- Blink Detection --- */
+.blink-status {
+    display: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.blink-waiting {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    color: #b45309;
+}
+
+.blink-success {
+    background: #f0fff4;
+    border: 1px solid #9ae6b4;
+    color: #276749;
+}
+
+.blink-warning {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    color: #c53030;
+}

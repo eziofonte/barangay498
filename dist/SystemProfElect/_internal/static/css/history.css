@@ -1,0 +1,194 @@
+/* ============================================================
+   history.css — Transaction History Page Styles
+   ============================================================ */
+
+.filters {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 180px;
+}
+
+.filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.filter-group input {
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.filter-group input:focus {
+    outline: none;
+    border-color: #1a56a0;
+    box-shadow: 0 0 0 3px rgba(26,86,160,0.1);
+}
+
+.total-bar {
+    padding: 14px 16px;
+    text-align: right;
+    font-size: 14px;
+    color: #718096;
+    border-top: 1px solid #f7fafc;
+    background: #f7fafc;
+}
+
+.total-bar strong { color: #1a365d; }
+
+.btn-reset {
+    background: #fff8f0;
+    color: #c05621;
+    border: 2px solid #fbd38d;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-reset:hover {
+    background: #c05621;
+    color: white;
+}
+
+.btn-reset-all {
+    background: #fff5f5;
+    color: #c53030;
+    border: 2px solid #feb2b2;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    margin-bottom: 16px;
+}
+
+.btn-reset-all:hover {
+    background: #c53030;
+    color: white;
+}
+
+/* --- Proof Modal --- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-overlay.visible {
+    display: flex;
+}
+
+.modal-box {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 680px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.modal-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a365d;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #718096;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.modal-close:hover { background: #f0f4f8; }
+
+.modal-ref {
+    font-size: 13px;
+    color: #1a56a0;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.modal-date {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 24px;
+}
+
+.modal-proof-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.proof-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+.proof-img-wrapper {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7fafc;
+}
+
+.proof-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+.no-proof {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a0aec0;
+    font-size: 14px;
+    padding: 20px;
+}
