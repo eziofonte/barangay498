@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Register Senior — System Prof Elect{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/register.css">
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">← Back to Dashboard</a>
+<div class="page-header">
+    <h2>Register New Senior</h2>
+    <p>Fill in the senior citizen's details and provide their face photo</p>
+</div>
+
+<div class="card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if 'registered' in message or 'photo' in message %}
+                    <div class="flash-{{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" enctype="multipart/form-data" id="registerForm">
+        <div class="register-layout">
+
+            <!-- Left: Form fields -->
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="e.g. Juan Dela Cruz" required />
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <div class="age-input-wrapper">
+                        <button type="button" class="age-btn" onclick="changeAge(-1)">−</button>
+                        <input type="number" name="age" id="ageInput" value="60" min="60" required />
+                        <button type="button" class="age-btn" onclick="changeAge(1)">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" name="address" placeholder="e.g. 123 Rizal St., Barangay 498" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Face Photo</label>
+                    <div class="photo-toggle">
+                        <button type="button" class="toggle-btn active" id="btnUpload" onclick="switchMode('upload')">Upload Photo</button>
+                        <button type="button" class="toggle-btn" id="btnCamera" onclick="switchMode('camera')">Use Camera</button>
+                    </div>
+                </div>
+
+                <!-- Upload Mode -->
+                <div id="uploadMode">
+                    <div class="preview" id="preview">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <div style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;"></div>
+                            <p>Photo preview will appear here</p>
+                        </div>
+                        <img class="preview-img" id="preview-img" src="" alt="preview" />
+                    </div>
+                    <input type="file" name="photo" id="photo" accept="image/*" />
+                </div>
+
+                <input type="hidden" name="captured_photo" id="captured_photo" />
+                <button type="submit" class="btn btn-primary btn-submit" style="margin-top:24px;">Register Senior</button>
+            </div>
+
+            <!-- Right: Camera (shown when camera mode is active) -->
+            <div class="camera-section" id="cameraSection">
+                <div class="camera-preview">
+                    <video id="regVideo" autoplay playsinline></video>
+                    <canvas id="regCanvas"></canvas>
+                    <img id="capturedPhoto" src="" alt="Captured" style="display:none;" />
+                </div>
+                <div class="camera-controls">
+                    <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">Capture Photo</button>
+                    <button type="button" class="btn btn-outline" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/register.js"></script>
+{% endblock %}

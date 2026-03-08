@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Login — System Prof Elect{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/login.css">
+{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+    <div class="login-box">
+        <div class="login-header">
+            <!-- Replace logo-placeholder with: <img class="login-logo" src="/static/img/barangay-seal.png" alt="Barangay Seal"> -->
+            <div class="logo-placeholder">SEAL</div>
+            <h2>System Prof Elect</h2>
+            <p>Barangay Official Login</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-error">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" placeholder="Enter your username" required />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Enter your password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Log In</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

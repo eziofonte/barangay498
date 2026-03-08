@@ -1,11 +1,21 @@
 import cv2
 import numpy as np
 import dlib
+import os
+import sys
 from scipy.spatial import distance as dist
+
+# Find the correct path whether running as script or exe
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+model_path = os.path.join(base_path, 'shape_predictor_68_face_landmarks.dat')
 
 # Load once at startup
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor(model_path)
 
 def get_eye_points(landmarks, start, end):
     return [(landmarks.part(i).x, landmarks.part(i).y) for i in range(start, end)]
