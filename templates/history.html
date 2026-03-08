@@ -75,8 +75,8 @@
                             '{{ t.senior.full_name }}',
                             '{{ t.reference_number }}',
                             '{{ t.date_released.strftime('%b %d, %Y %I:%M %p') }}',
-                            '{{ ('/' + t.release_photo_path) if t.release_photo_path else '' | replace("'", "\\'") }}',
-                            '{{ ('/' + t.signature_path) if t.signature_path else '' | replace("'", "\\'") }}'
+                            '{{ ('/' + t.release_photo_path) if t.release_photo_path else '' }}',
+                            '{{ ('/' + t.signature_path) if t.signature_path else '' }}'
                         )">View Proof</button>
                 </td>
             </tr>

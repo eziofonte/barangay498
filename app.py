@@ -1,5 +1,4 @@
 import json
-
 import face_recognition
 import numpy as np
 import base64
@@ -7,17 +6,21 @@ import uuid as uuid_module
 import os
 from io import BytesIO
 from PIL import Image
+from flask import session
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from models import db, Official, Senior, Transaction
 from blink import detect_blink as check_blink
+from datetime import datetime, timedelta
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['UPLOAD_FOLDER'] = 'static/faces'
+app.config['PERMANENT_SESSION_LIFETIME'] = 900
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -33,27 +36,69 @@ def allowed_file(filename):
 def load_user(user_id):
     return Official.query.get(int(user_id))
 
+@app.before_request
+def check_session_timeout():
+    if current_user.is_authenticated:
+        last_active = session.get('last_active')
+        if last_active:
+            last_active_dt = datetime.fromisoformat(last_active)
+            if datetime.now() - last_active_dt > timedelta(seconds=15):
+                logout_user()
+                session.clear()
+                flash('Your session has expired due to inactivity. Please log in again.')
+                return redirect(url_for('login'))
+        session['last_active'] = datetime.now().isoformat()
+        session.permanent = True
+
 # --- Login ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    from datetime import datetime, timedelta
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         official = Official.query.filter_by(username=username).first()
 
-        if official and check_password_hash(official.password, password):
-            login_user(official)
-            return redirect(url_for('index'))
+        if official:
+            # Check if account is locked
+            if official.locked_until and datetime.now() < official.locked_until:
+                remaining = int((official.locked_until - datetime.now()).total_seconds() / 60) + 1
+                flash(f'Account locked. Too many failed attempts. Try again in {remaining} minute(s).')
+                return render_template('login.html')
+
+            if check_password_hash(official.password, password):
+                # Reset failed attempts on success
+                official.failed_attempts = 0
+                official.locked_until = None
+                db.session.commit()
+                login_user(official)
+                return redirect(url_for('index'))
+            else:
+                # Increment failed attempts
+                official.failed_attempts += 1
+                if official.failed_attempts >= 5:
+                    official.locked_until = datetime.now() + timedelta(minutes=5)
+                    official.failed_attempts = 0
+                    db.session.commit()
+                    flash('Too many failed attempts. Account locked for 5 minutes.')
+                else:
+                    db.session.commit()
+                    remaining_attempts = 5 - official.failed_attempts
+                    flash(f'Invalid password. {remaining_attempts} attempt(s) remaining.')
         else:
-            flash('Invalid username or password')
+            flash('Invalid username or password.')
 
     return render_template('login.html')
 
 # --- Logout ---
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
+    session.clear()
+    reason = request.args.get('reason')
+    if reason == 'timeout':
+        flash('You have been logged out due to inactivity.')
     return redirect(url_for('login'))
 
 # --- Register Senior ---
@@ -61,9 +106,8 @@ def logout():
 @login_required
 def register_senior():
     if request.method == 'POST':
-        import base64, uuid
+        import base64, uuid, time, io
         from PIL import Image as PILImage
-        from io import BytesIO as BytesIO2
 
         full_name = request.form.get('full_name')
         age = request.form.get('age')
@@ -74,53 +118,56 @@ def register_senior():
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
         photo_path = None
+        img_array = None
 
         # Camera capture mode
         if captured_photo and captured_photo.startswith('data:image'):
             image_data = captured_photo.split(',')[1]
             image_bytes = base64.b64decode(image_data)
             filename = f"capture_{uuid.uuid4().hex}.jpg"
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename).replace('\\', '/')
             with open(photo_path, 'wb') as f:
                 f.write(image_bytes)
+            # Load from memory directly — avoids file locking
+            pil_image = PILImage.open(io.BytesIO(image_bytes)).convert('RGB')
+            img_array = np.array(pil_image)
 
         # Upload mode
         elif photo and allowed_file(photo.filename):
             filename = secure_filename(photo.filename)
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename).replace('\\', '/')
             photo.save(photo_path)
+            time.sleep(0.3)
+            pil_image = PILImage.open(photo_path).convert('RGB')
+            img_array = np.array(pil_image)
 
         else:
             flash('Please provide a photo — either upload one or use the camera.')
             return render_template('register_senior.html')
 
-        # Check if face already exists in the system
+        # Get encoding of new photo
+        new_encodings = face_recognition.face_encodings(img_array)
+        del img_array
+
+        if not new_encodings:
+            flash('No face detected in the photo. Please try again.')
+            return render_template('register_senior.html')
+
+        # Check if face already exists using cached encodings
         seniors = Senior.query.all()
         for existing_senior in seniors:
             try:
-                if existing_senior.face_encoding:
-                    import json
-                    known_encoding = np.array(json.loads(existing_senior.face_encoding))
-                else:
-                    known_image = face_recognition.load_image_file(existing_senior.photo_path)
-                    known_encodings = face_recognition.face_encodings(known_image)
-                    if not known_encodings:
-                        continue
-                    known_encoding = known_encodings[0]
-
-                new_image = face_recognition.load_image_file(photo_path)
-                new_encodings = face_recognition.face_encodings(new_image)
-                if not new_encodings:
+                if not existing_senior.face_encoding:
                     continue
-
+                known_encoding = np.array(json.loads(existing_senior.face_encoding))
                 distance = face_recognition.face_distance([known_encoding], new_encodings[0])[0]
                 results = face_recognition.compare_faces([known_encoding], new_encodings[0], tolerance=0.4)
 
                 if results[0] and distance < 0.4:
-                    os.remove(photo_path)
                     flash(f'This person is already registered as {existing_senior.full_name}.')
                     return render_template('register_senior.html')
-            except Exception:
+            except Exception as e:
+                print(f"Encoding check error: {e}")
                 continue
 
         # All checks passed — save senior
@@ -128,11 +175,11 @@ def register_senior():
             full_name=full_name,
             age=age,
             address=address,
-            photo_path=photo_path
+            photo_path=photo_path,
+            face_encoding=json.dumps(new_encodings[0].tolist())
         )
         db.session.add(senior)
         db.session.commit()
-        compute_and_save_encoding(senior)
         flash('Senior registered successfully!')
         return redirect(url_for('index'))
 
@@ -407,8 +454,8 @@ def confirm_release():
 
     transaction = Transaction.query.get_or_404(transaction_id)
 
-    sig_path = 'static/signatures/' + sig_filename
-    photo_path = 'static/release_photos/' + photo_filename
+    os.makedirs('static/signatures', exist_ok=True)
+    os.makedirs('static/release_photos', exist_ok=True)
 
     # Save signature
     if signature_data and signature_data.startswith('data:image'):
@@ -451,7 +498,6 @@ def reset_senior_claim(senior_id):
     return redirect(url_for('seniors'))
 
 # --- Blink Detection ---
-# --- Blink Detection ---
 @app.route('/detect-blink', methods=['POST'])
 @login_required
 def detect_blink_route():
@@ -470,18 +516,6 @@ def detect_blink_route():
     image_bytes = base64.b64decode(image_data.split(',')[1])
     result = check_blink(image_bytes)
     return result
-
-@app.route('/fix-paths')
-@login_required
-def fix_paths():
-    transactions = Transaction.query.all()
-    for t in transactions:
-        if t.release_photo_path:
-            t.release_photo_path = t.release_photo_path.replace('\\', '/')
-        if t.signature_path:
-            t.signature_path = t.signature_path.replace('\\', '/')
-    db.session.commit()
-    return {'status': 'fixed'}
 
 if __name__ == '__main__':
     app.run(debug=True)
