@@ -9,34 +9,42 @@
 {% block content %}
 <div class="page-header">
     <h2>Welcome, {{ current_user.name }}</h2>
-    <p>Here is today's overview — {{ now.strftime('%B %d, %Y') }}</p>
+    <p id="greeting">Here is today's overview — {{ now.strftime('%B %d, %Y') }}</p>
 </div>
 
 <!-- Stats -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-icon">
+            <img src="/static/img/icons/seniors-icon.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <div class="stat-info">
             <h3>{{ senior_count }}</h3>
             <p>Registered Seniors</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-icon">
+            <img src="/static/img/icons/claimed.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <div class="stat-info">
             <h3>{{ claimed_count }}</h3>
             <p>Claimed (Last 90 Days)</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-icon">
+            <img src="/static/img/icons/unclaimed.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <div class="stat-info">
             <h3 class="clr-red">{{ unclaimed_count }}</h3>
             <p>Unclaimed</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon"><div class="icon-placeholder"></div></div>
+        <div class="stat-icon">
+            <img src="/static/img/icons/total-released.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <div class="stat-info">
             <h3 class="clr-blue">₱{{ "%.2f"|format(total_released) }}</h3>
             <p>Total Released</p>
@@ -44,25 +52,46 @@
     </div>
 </div>
 
+<!-- Claim Progress -->
+<div class="progress-section">
+    <div class="progress-header">
+        <span>Claim Progress This Period</span>
+        <span><strong>{{ claimed_count }}</strong> of <strong>{{ senior_count }}</strong> seniors claimed</span>
+    </div>
+    <div class="progress-bar-track">
+        {% set percent = ((claimed_count / senior_count * 100) | int) if senior_count > 0 else 0 %}
+        <div class="progress-bar-fill" style="width: 0%" data-target="{{ percent }}"></div>
+    </div>
+    <div class="progress-label">{{ percent }}% claim rate</div>
+</div>
+
 <!-- Quick Actions -->
 <div class="actions-grid">
     <a href="/scan" class="action-card">
-        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <div class="card-icon">
+            <img src="/static/img/icons/scan-face.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <h3>Scan Senior Face</h3>
         <p>Verify identity and release money</p>
     </a>
     <a href="/register-senior" class="action-card">
-        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <div class="card-icon">
+            <img src="/static/img/icons/register-senior.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <h3>Register New Senior</h3>
         <p>Enroll a new senior citizen</p>
     </a>
     <a href="/seniors" class="action-card">
-        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <div class="card-icon">
+            <img src="/static/img/icons/view-seniors.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <h3>View All Seniors</h3>
         <p>Browse registered senior citizens</p>
     </a>
     <a href="/history" class="action-card">
-        <div class="card-icon"><div class="icon-placeholder"></div></div>
+        <div class="card-icon">
+            <img src="/static/img/icons/transaction-history.svg" style="width:32px !important;height:32px !important;object-fit:contain;display:block;" />
+        </div>
         <h3>Transaction History</h3>
         <p>View all money release records</p>
     </a>
@@ -112,5 +141,44 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+// Greeting
+const hour = new Date().getHours();
+const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+document.getElementById('greeting').textContent = `${greeting}! Here is today's overview — {{ now.strftime('%B %d, %Y') }}`;
+
+// Count-up animation
+function countUp(el, target, duration = 1000) {
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+        start += step;
+        if (start >= target) {
+            el.textContent = target;
+            clearInterval(timer);
+        } else {
+            el.textContent = Math.floor(start);
+        }
+    }, 16);
+}
+
+document.querySelectorAll('.stat-info h3').forEach(el => {
+    const text = el.textContent.trim();
+    if (/^\d+$/.test(text)) {
+        const target = parseInt(text);
+        el.textContent = '0';
+        countUp(el, target);
+    }
+});
+
+// Animate progress bar
+const bar = document.querySelector('.progress-bar-fill');
+if (bar) {
+    setTimeout(() => {
+        bar.style.width = bar.dataset.target + '%';
+    }, 100);
+}
+</script>
 
 {% endblock %}

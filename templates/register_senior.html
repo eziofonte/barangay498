@@ -62,7 +62,12 @@
                         </div>
                         <img class="preview-img" id="preview-img" src="" alt="preview" />
                     </div>
-                    <input type="file" name="photo" id="photo" accept="image/*" />
+                    <input type="file" name="photo" id="photo" accept="image/*" style="display:none;" />
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('photo').click()">
+                        <div class="upload-icon">📁</div>
+                        <p class="upload-text">Click to choose a photo</p>
+                        <p class="upload-subtext">JPG, JPEG, PNG supported</p>
+                    </div>
                 </div>
 
                 <input type="hidden" name="captured_photo" id="captured_photo" />

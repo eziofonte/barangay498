@@ -157,12 +157,21 @@ def register_senior():
             return render_template('register_senior.html')
 
         # Check if face already exists using cached encodings
-        seniors = Senior.query.all()
-        for existing_senior in seniors:
+        # Check if face already exists using cached encodings
+        all_seniors = Senior.query.all()
+        for existing_senior in all_seniors:
             try:
                 if not existing_senior.face_encoding:
-                    continue
-                known_encoding = np.array(json.loads(existing_senior.face_encoding))
+                    # Fallback: compute from file
+                    pil = PILImage.open(existing_senior.photo_path).convert('RGB')
+                    arr = np.array(pil)
+                    encs = face_recognition.face_encodings(arr)
+                    if not encs:
+                        continue
+                    known_encoding = encs[0]
+                else:
+                    known_encoding = np.array(json.loads(existing_senior.face_encoding))
+
                 distance = face_recognition.face_distance([known_encoding], new_encodings[0])[0]
                 results = face_recognition.compare_faces([known_encoding], new_encodings[0], tolerance=0.4)
 
@@ -382,7 +391,9 @@ def index():
 
     senior_count = Senior.query.count()
     transaction_count = Transaction.query.count()
-    total_released = db.session.query(db.func.sum(Transaction.amount)).scalar() or 0
+    total_released = db.session.query(db.func.sum(Transaction.amount)).filter(
+        Transaction.status == 'Released'
+    ).scalar() or 0
 
     claimed_ids = db.session.query(Transaction.senior_id).filter(
         Transaction.date_released >= cutoff
@@ -456,6 +467,13 @@ def confirm_release():
 
     return {'status': 'success', 'reference_number': transaction.reference_number}
 
+# --- Get Seniors List for Proxy ---
+@app.route('/seniors-list')
+@login_required
+def seniors_list():
+    seniors = Senior.query.all()
+    return {'seniors': [{'id': s.id, 'name': s.full_name, 'age': s.age} for s in seniors]}
+
 # --- Reset Individual Senior Claim ---
 @app.route('/seniors/<int:senior_id>/reset-claim', methods=['POST'])
 @login_required
@@ -491,11 +509,107 @@ def detect_blink_route():
     result = check_blink(image_bytes)
     return result
 
-@app.route('/debug-senior-paths')
+# --- Proxy Release ---
+@app.route('/proxy-release', methods=['POST'])
 @login_required
-def debug_senior_paths():
-    seniors = Senior.query.all()
-    return {s.full_name: s.photo_path for s in seniors}
+def proxy_release():
+    from werkzeug.security import check_password_hash
+    data = request.get_json()
+    captain_pin = data.get('captain_pin')
+    senior_id = data.get('senior_id')
+    proxy_name = data.get('proxy_name')
+    proxy_relationship = data.get('proxy_relationship')
+    signature_data = data.get('signature')
+    release_photo_data = data.get('release_photo')
+
+    # Verify captain PIN
+    captain = Official.query.filter_by(role='captain').first()
+    if not captain or not captain.captain_pin:
+        return {'status': 'error', 'message': 'No captain account found.'}
+    if not check_password_hash(captain.captain_pin, captain_pin):
+        return {'status': 'error', 'message': 'Incorrect captain PIN.'}
+
+    senior = Senior.query.get_or_404(senior_id)
+
+    # 90-day cooldown check
+    cutoff = datetime.now() - timedelta(days=90)
+    recent = Transaction.query.filter_by(senior_id=senior.id).filter(
+        Transaction.date_released >= cutoff,
+        Transaction.status == 'Released'
+    ).first()
+    if recent:
+        next_date = recent.date_released + timedelta(days=90)
+        return {
+            'status': 'already_claimed',
+            'message': f'Already claimed on {recent.date_released.strftime("%B %d, %Y")}. Next eligible: {next_date.strftime("%B %d, %Y")}'
+        }
+
+    transaction = Transaction(
+        reference_number=generate_reference(),
+        senior_id=senior.id,
+        amount=1500.00,
+        released_by=current_user.name,
+        status='Released',
+        release_type='Proxy',
+        proxy_name=proxy_name,
+        proxy_relationship=proxy_relationship
+    )
+    db.session.add(transaction)
+    db.session.flush()
+
+    os.makedirs('static/signatures', exist_ok=True)
+    os.makedirs('static/release_photos', exist_ok=True)
+
+    senior_name = senior.full_name.replace(' ', '_')
+    ref = transaction.reference_number
+
+    if signature_data and signature_data.startswith('data:image'):
+        sig_bytes = base64.b64decode(signature_data.split(',')[1])
+        sig_filename = f"{senior_name}_{ref}_proxy_signature.png"
+        sig_path = 'static/signatures/' + sig_filename
+        with open(sig_path, 'wb') as f:
+            f.write(sig_bytes)
+        transaction.signature_path = sig_path
+
+    if release_photo_data and release_photo_data.startswith('data:image'):
+        photo_bytes = base64.b64decode(release_photo_data.split(',')[1])
+        photo_filename = f"{senior_name}_{ref}_proxy_release.jpg"
+        photo_path = 'static/release_photos/' + photo_filename
+        with open(photo_path, 'wb') as f:
+            f.write(photo_bytes)
+        transaction.release_photo_path = photo_path
+
+    db.session.commit()
+
+    return {
+        'status': 'success',
+        'reference_number': transaction.reference_number,
+        'senior_name': senior.full_name,
+        'proxy_name': proxy_name
+    }
+
+@app.route('/verify-captain-pin', methods=['POST'])
+@login_required
+def verify_captain_pin():
+    from werkzeug.security import check_password_hash
+    data = request.get_json()
+    captain_pin = data.get('captain_pin')
+    captain = Official.query.filter_by(role='captain').first()
+    if not captain or not captain.captain_pin:
+        return {'status': 'error', 'message': 'No captain account found.'}
+    if not check_password_hash(captain.captain_pin, captain_pin):
+        return {'status': 'error', 'message': 'Incorrect captain PIN.'}
+    return {'status': 'ok'}
+
+@app.route('/fix-captain')
+@login_required
+def fix_captain():
+    from werkzeug.security import generate_password_hash
+    admin = Official.query.filter_by(username='admin').first()
+    admin.role = 'captain'
+    admin.captain_pin = generate_password_hash('captain1234')
+    db.session.commit()
+    return {'status': 'done', 'message': 'Admin is now captain with PIN: captain1234'}
 
 if __name__ == '__main__':
     app.run(debug=True)

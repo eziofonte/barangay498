@@ -10,6 +10,8 @@ class Official(db.Model, UserMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(300), nullable=False)
     name = db.Column(db.String(150), nullable=False)
+    role = db.Column(db.String(50), default='official')
+    captain_pin = db.Column(db.String(300), nullable=True)
     failed_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
@@ -33,4 +35,7 @@ class Transaction(db.Model):
     status = db.Column(db.String(50), default='Released')
     signature_path = db.Column(db.String(300), nullable=True)
     release_photo_path = db.Column(db.String(300), nullable=True)
+    release_type = db.Column(db.String(50), default='Direct')
+    proxy_name = db.Column(db.String(150), nullable=True)
+    proxy_relationship = db.Column(db.String(150), nullable=True)
     senior = db.relationship('Senior', backref='transactions')

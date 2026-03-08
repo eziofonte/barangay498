@@ -43,6 +43,13 @@ body {
     object-fit: contain;
 }
 
+.avatar-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .logo-placeholder {
     width: 40px;
     height: 40px;
@@ -141,6 +148,10 @@ body {
     font-weight: 700;
 }
 
+.nav-item.active .nav-icon {
+    filter: brightness(0) invert(1);
+}
+
 .nav-item.active .nav-icon-placeholder {
     background: rgba(255,255,255,0.3);
 }
@@ -172,6 +183,10 @@ body {
     background: #e53e3e;
     color: white;
     border-color: #e53e3e;
+}
+
+.nav-item.logout:hover .nav-icon {
+    filter: brightness(0) invert(1);
 }
 
 .nav-item.logout .nav-icon-placeholder {
