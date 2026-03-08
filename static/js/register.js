@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', function () {
         photoInput.addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file) {
+                // Update upload area text
+                const uploadText = document.querySelector('.upload-text');
+                const uploadSubtext = document.querySelector('.upload-subtext');
+                if (uploadText) uploadText.textContent = file.name;
+                if (uploadSubtext) uploadSubtext.textContent = 'Click to change photo';
+
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     document.getElementById('preview-img').src = e.target.result;

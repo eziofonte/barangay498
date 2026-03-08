@@ -10,11 +10,14 @@ def init_db():
             admin = Official(
                 name='Admin Official',
                 username='admin',
-                password=generate_password_hash('admin123')
+                password=generate_password_hash('admin123'),
+                role='captain',
+                captain_pin=generate_password_hash('captain1234')
             )
             db.session.add(admin)
             db.session.commit()
             print("✅ Default admin created — username: admin, password: admin123")
+            print("✅ Captain PIN set to: captain1234")
 
         print("✅ Database ready!")
 

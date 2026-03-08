@@ -302,3 +302,197 @@ function startAutoClear(resultBox) {
         resultBox.innerHTML = '';
     }, 10000);
 }
+
+// --- Proxy Release ---
+async function openProxyModal() {
+    // Load seniors list
+    const response = await fetch('/seniors-list');
+    const data = await response.json();
+    const select = document.getElementById('proxySeniorSelect');
+    select.innerHTML = '<option value="">-- Select Senior --</option>';
+    data.seniors.forEach(s => {
+        select.innerHTML += `<option value="${s.id}">${s.name} (Age: ${s.age})</option>`;
+    });
+    document.getElementById('proxyModal').classList.add('visible');
+    document.getElementById('proxyError').style.display = 'none';
+    document.getElementById('captainPin').value = '';
+    document.getElementById('proxyName').value = '';
+    document.getElementById('proxyRelationship').value = '';
+}
+
+function closeProxyModal() {
+    document.getElementById('proxyModal').classList.remove('visible');
+}
+
+async function submitProxyRelease() {
+    const senior_id = document.getElementById('proxySeniorSelect').value;
+    const proxy_name = document.getElementById('proxyName').value.trim();
+    const proxy_relationship = document.getElementById('proxyRelationship').value.trim();
+    const captain_pin = document.getElementById('captainPin').value;
+    const errorBox = document.getElementById('proxyError');
+
+    if (!senior_id || !proxy_name || !proxy_relationship || !captain_pin) {
+        errorBox.textContent = 'Please fill in all fields.';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    // Verify PIN first before showing confirmation
+    try {
+        const verifyResponse = await fetch('/verify-captain-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ captain_pin })
+        });
+        const verifyData = await verifyResponse.json();
+        if (verifyData.status !== 'ok') {
+            errorBox.textContent = verifyData.message;
+            errorBox.style.display = 'block';
+            return;
+        }
+    } catch (err) {
+        errorBox.textContent = 'Something went wrong. Please try again.';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    // PIN verified — close proxy modal and show proxy confirmation
+    closeProxyModal();
+    openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin);
+}
+
+function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin) {
+    // Store proxy details for later
+    window._proxyData = { senior_id, proxy_name, proxy_relationship, captain_pin };
+
+    // Reset confirmation fields
+    document.getElementById('proxyConfirmPhoto').src = '';
+    document.getElementById('proxyPhotoData').value = '';
+    document.getElementById('proxySignaturePad').getContext('2d').clearRect(0, 0, 400, 150);
+    window._proxySignatureData = null;
+
+    // Show the senior name
+    const select = document.getElementById('proxySeniorSelect');
+    const seniorName = select.options[select.selectedIndex]?.text || '';
+    document.getElementById('proxyConfirmSeniorName').textContent = seniorName.split(' (')[0];
+    document.getElementById('proxyConfirmProxyName').textContent = proxy_name;
+
+    // Mirror main webcam stream into proxy video
+    // Start mirroring main video to proxy canvas
+    const mainVideo = document.getElementById('video');
+    const proxyCanvas = document.getElementById('proxyVideoCanvas');
+    proxyCanvas.width = mainVideo.videoWidth;
+    proxyCanvas.height = mainVideo.videoHeight;
+    proxyCanvas.style.display = 'block';
+    document.getElementById('proxyConfirmPhoto').style.display = 'none';
+    document.getElementById('proxyPhotoData').value = '';
+
+    window._proxyMirrorInterval = setInterval(() => {
+        if (mainVideo.readyState >= 2) {
+            proxyCanvas.getContext('2d').drawImage(mainVideo, 0, 0, proxyCanvas.width, proxyCanvas.height);
+        }
+    }, 50);
+
+    document.getElementById('proxyConfirmModal').classList.add('visible');
+    startProxySignaturePad();
+}
+
+function closeProxyConfirmation() {
+    clearInterval(window._proxyMirrorInterval);
+    document.getElementById('proxyConfirmModal').classList.remove('visible');
+}
+
+// --- Proxy signature pad ---
+function startProxySignaturePad() {
+    const canvas = document.getElementById('proxySignaturePad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+
+    canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+    canvas.onmousemove = (e) => { if (!drawing) return; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1a365d'; ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); };
+    canvas.onmouseup = () => { drawing = false; window._proxySignatureData = canvas.toDataURL('image/png'); };
+    canvas.onmouseleave = () => { drawing = false; };
+
+    // Touch support
+    canvas.ontouchstart = (e) => { e.preventDefault(); drawing = true; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+    canvas.ontouchmove = (e) => { e.preventDefault(); if (!drawing) return; const t = e.touches[0]; const r = canvas.getBoundingClientRect(); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1a365d'; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+    canvas.ontouchend = () => { drawing = false; window._proxySignatureData = canvas.toDataURL('image/png'); };
+}
+
+function clearProxySignature() {
+    const canvas = document.getElementById('proxySignaturePad');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    window._proxySignatureData = null;
+}
+
+// --- Proxy live photo ---
+function takeProxyPhoto() {
+    clearInterval(window._proxyMirrorInterval);
+    const mainVideo = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    canvas.width = mainVideo.videoWidth;
+    canvas.height = mainVideo.videoHeight;
+    canvas.getContext('2d').drawImage(mainVideo, 0, 0);
+    const photoData = canvas.toDataURL('image/jpeg');
+
+    document.getElementById('proxyVideoCanvas').style.display = 'none';
+    document.getElementById('proxyConfirmPhoto').style.display = 'block';
+    document.getElementById('proxyConfirmPhoto').src = photoData;
+    document.getElementById('proxyPhotoData').value = photoData;
+}
+
+// --- Final proxy submission ---
+async function confirmProxyRelease() {
+    const errorBox = document.getElementById('proxyConfirmError');
+    const photoData = document.getElementById('proxyPhotoData').value;
+    const signatureData = window._proxySignatureData;
+
+    if (!photoData) {
+        errorBox.textContent = 'Please take a live photo first.';
+        errorBox.style.display = 'block';
+        return;
+    }
+    if (!signatureData) {
+        errorBox.textContent = 'Please get the proxy\'s signature first.';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    const { senior_id, proxy_name, proxy_relationship, captain_pin } = window._proxyData;
+
+    try {
+        const response = await fetch('/proxy-release', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                senior_id, proxy_name, proxy_relationship, captain_pin,
+                release_photo: photoData,
+                signature: signatureData
+            })
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            closeProxyConfirmation();
+            const resultBox = document.getElementById('result');
+            resultBox.style.display = 'block';
+            resultBox.className = 'result result-match';
+            resultBox.innerHTML = `
+                <div class="result-info">
+                    <h3>Proxy Release Authorized</h3>
+                    <p><strong>Senior:</strong> ${data.senior_name}</p>
+                    <p><strong>Proxy:</strong> ${data.proxy_name}</p>
+                    <p style="font-size:13px;color:#718096;margin-top:4px;">Ref: ${data.reference_number}</p>
+                    <span class="release-tag">₱1,500.00 Released via Proxy</span>
+                </div>`;
+            startAutoClear(resultBox);
+            startBlinkDetection();
+        } else {
+            errorBox.textContent = data.message;
+            errorBox.style.display = 'block';
+        }
+    } catch (err) {
+        errorBox.textContent = 'Something went wrong. Please try again.';
+        errorBox.style.display = 'block';
+    }
+}

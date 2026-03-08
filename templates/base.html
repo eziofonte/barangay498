@@ -12,8 +12,7 @@
     <!-- Top Bar -->
     <div class="topbar">
         <div class="topbar-left">
-            <!-- Replace with: <img src="/static/img/logo.png" class="topbar-logo" alt="Logo"> -->
-            <div class="logo-placeholder">LOGO</div>
+            <img src="/static/img/icons/barangay-logo.png" class="topbar-logo" alt="Logo">
             <div class="topbar-title">
                 <h1>System Prof Elect</h1>
                 <p>Barangay Senior Citizens Management</p>
@@ -21,7 +20,6 @@
         </div>
         {% if current_user.is_authenticated %}
         <div class="topbar-right">
-            <div class="avatar-placeholder">USER</div>
             <span>{{ current_user.name }}</span>
         </div>
         {% endif %}
@@ -29,40 +27,39 @@
 
     <div class="layout">
 
-        <!-- Sidebar -->
-        {% if current_user.is_authenticated %}
-        <aside class="sidebar">
-            <nav>
-                <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/scan" class="nav-item {% if request.path == '/scan' %}active{% endif %}">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>Scan Face</span>
-                </a>
-                <a href="/seniors" class="nav-item {% if request.path == '/seniors' %}active{% endif %}">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>Seniors</span>
-                </a>
-                <a href="/register-senior" class="nav-item {% if request.path == '/register-senior' %}active{% endif %}">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>Register Senior</span>
-                </a>
-                <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>History</span>
-                </a>
-            </nav>
-            <div class="sidebar-bottom">
-                <a href="/logout" class="nav-item logout">
-                    <div class="nav-icon-placeholder"></div>
-                    <span>Logout</span>
-                </a>
-            </div>
-        </aside>
-        {% endif %}
-
+       <!-- Sidebar -->
+{% if current_user.is_authenticated %}
+<aside class="sidebar">
+    <nav>
+        <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+            <img src="/static/img/icons/dashboard-icon.svg" class="nav-icon" alt="Dashboard" />
+            <span>Dashboard</span>
+        </a>
+        <a href="/scan" class="nav-item {% if request.path == '/scan' %}active{% endif %}">
+            <img src="/static/img/icons/scan-face.svg" class="nav-icon" alt="Scan Face" />
+            <span>Scan Face</span>
+        </a>
+        <a href="/seniors" class="nav-item {% if request.path == '/seniors' %}active{% endif %}">
+            <img src="/static/img/icons/seniors-icon.svg" class="nav-icon" alt="Seniors" />
+            <span>Seniors</span>
+        </a>
+        <a href="/register-senior" class="nav-item {% if request.path == '/register-senior' %}active{% endif %}">
+            <img src="/static/img/icons/register-senior.svg" class="nav-icon" alt="Register Senior" />
+            <span>Register Senior</span>
+        </a>
+        <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
+            <img src="/static/img/icons/transaction-history.svg" class="nav-icon" alt="History" />
+            <span>History</span>
+        </a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="/logout" class="nav-item logout">
+            <img src="/static/img/icons/logout-icon.svg" class="nav-icon" alt="Logout" />
+            <span>Logout</span>
+        </a>
+    </div>
+</aside>
+{% endif %}
         <!-- Main Content -->
         <main class="main-content">
             {% block content %}{% endblock %}

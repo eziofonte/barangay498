@@ -55,18 +55,25 @@
             <tr>
                 <td>{{ loop.index }}</td>
                 <td><span class="badge badge-blue">{{ t.reference_number }}</span></td>
-                <td><strong>{{ t.senior.full_name }}</strong></td>
+                <td>
+                    <strong>{{ t.senior.full_name }}</strong>
+                    {% if t.release_type == 'Proxy' %}
+                        <br><span class="badge badge-red" style="font-size:11px;">Proxy: {{ t.proxy_name }} ({{ t.proxy_relationship }})</span>
+                    {% endif %}
+                </td>
                 <td>{{ t.senior.age }}</td>
                 <td><strong>₱{{ "%.2f"|format(t.amount) }}</strong></td>
                 <td>{{ t.released_by }}</td>
                 <td>{{ t.date_released.strftime('%b %d, %Y %I:%M %p') }}</td>
                 <td>
-                    {% if t.status == 'Released' %}
+                    {% if t.status == 'Released' and t.release_type == 'Proxy' %}
+                        <span class="badge badge-red">Proxy Release</span>
+                    {% elif t.status == 'Released' %}
                         <span class="badge badge-green">{{ t.status }}</span>
                     {% elif t.status == 'Pending' %}
                         <span class="badge badge-blue">{{ t.status }}</span>
                     {% else %}
-                        <span class="badge badge-red">{{ t.status }}</span>
+                        <span class="badge" style="background:#f0f4f8;color:#718096;">{{ t.status }}</span>
                     {% endif %}
                 </td>
                 <td>
@@ -85,7 +92,7 @@
     </table>
     <div class="total-bar">
         Total: <strong>{{ transactions|length }} transactions</strong> &nbsp;|&nbsp;
-        Total Released: <strong>₱{{ "%.2f"|format(transactions|sum(attribute='amount')) }}</strong>
+        Total Released: <strong>₱{{ "%.2f"|format(transactions|selectattr('status', 'equalto', 'Released')|sum(attribute='amount')) }}</strong>
     </div>
     {% else %}
     <div class="empty-state">No transactions found.</div>
