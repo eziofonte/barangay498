@@ -24,12 +24,11 @@
             <p>Analyzing face, please wait...</p>
         </div>
     </div>
-
     <div class="result" id="result"></div>
     <p class="countdown" id="autoClearCountdown"></p>
 </div>
 
-<!-- Confirmation Overlay -->
+<!-- Regular Confirmation Modal -->
 <div class="confirmation-overlay" id="confirmationOverlay">
     <div class="confirmation-box">
         <img class="confirm-photo" id="confirmPhoto" src="" alt="Senior" />
@@ -38,29 +37,15 @@
         <p id="confirmAddress"></p>
         <div class="confirm-amount">₱1,500.00</div>
         <p class="ref-number" id="confirmRef"></p>
-
-        <!-- Live release photo -->
         <div class="release-photo-section">
             <p class="section-label">Live Photo</p>
             <video id="releaseVideo" autoplay playsinline></video>
             <canvas id="releaseCanvas"></canvas>
-            <img id="releaseCaptured" src="" alt="Release Photo" style="display:none;" />
+            <img id="releaseCaptured" alt="Release Photo" />
             <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:8px;">Take Photo</button>
             <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:8px;">Retake</button>
         </div>
-
-        <!-- Signature pad -->
-        <div class="signature-section">
-            <p class="section-label">Senior's Signature</p>
-            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
-            <button type="button" class="btn btn-outline btn-sm" onclick="clearSignature()" style="margin-top:8px;">Clear Signature</button>
-        </div>
-
-        <p>Confirm money release for this senior?</p>
-        <div class="confirm-actions">
-            <button class="btn btn-outline" onclick="cancelRelease()">Cancel</button>
-            <button class="btn btn-confirm" onclick="confirmRelease()">Confirm Release</button>
-        </div>
+        <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>
 </div>
 
@@ -69,31 +54,25 @@
     <div class="confirmation-box">
         <h3 style="color:#1a365d;margin-bottom:6px;">Proxy Release</h3>
         <p style="color:#718096;font-size:14px;margin-bottom:20px;">For bedridden seniors — requires Captain authorization</p>
-
         <div class="form-group">
             <label class="section-label">Select Senior Citizen</label>
             <select id="proxySeniorSelect" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
                 <option value="">-- Select Senior --</option>
             </select>
         </div>
-
         <div class="form-group" style="margin-top:14px;">
             <label class="section-label">Proxy Full Name</label>
             <input type="text" id="proxyName" placeholder="e.g. Maria Dela Cruz" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
         </div>
-
         <div class="form-group" style="margin-top:14px;">
             <label class="section-label">Relationship to Senior</label>
             <input type="text" id="proxyRelationship" placeholder="e.g. Daughter, Son, Spouse" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
         </div>
-
         <div class="form-group" style="margin-top:14px;">
             <label class="section-label">Captain's PIN</label>
             <input type="password" id="captainPin" placeholder="Enter captain PIN" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
         </div>
-
         <div id="proxyError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>
-
         <div class="confirm-actions" style="margin-top:20px;">
             <button class="btn btn-outline" onclick="closeProxyModal()">Cancel</button>
             <button class="btn btn-confirm" onclick="submitProxyRelease()">Authorize & Release</button>
@@ -102,38 +81,39 @@
 </div>
 
 <!-- Proxy Confirmation Modal -->
+<!-- Proxy Confirmation Modal -->
 <div class="confirmation-overlay" id="proxyConfirmModal">
     <div class="confirmation-box">
-        <h3 style="color:#1a365d;margin-bottom:4px;">Proxy Confirmation</h3>
-        <p style="color:#718096;font-size:13px;margin-bottom:16px;">
-            Senior: <strong id="proxyConfirmSeniorName"></strong> &nbsp;|&nbsp;
+        <img class="confirm-photo" id="proxyConfirmSeniorPhoto" src="" alt="Senior" />
+        <h3 id="proxyConfirmSeniorName"></h3>
+        <p id="proxyConfirmSeniorAge"></p>
+        <p id="proxyConfirmSeniorAddress"></p>
+        <div class="confirm-amount">₱1,500.00</div>
+        <p style="color:#718096;font-size:13px;margin-bottom:8px;">
             Proxy: <strong id="proxyConfirmProxyName"></strong>
         </p>
 
-        <!-- Live Photo -->
-        <label class="section-label">Live Photo of Proxy</label>
-        <div style="margin-bottom:10px;">
-            <canvas id="proxyVideoCanvas"
-                style="width:100%;aspect-ratio:4/3;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:8px;background:#000;"></canvas>
-            <img id="proxyConfirmPhoto" alt="Live Photo"
-                style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;display:none;margin-bottom:8px;background:#f7fafc;" />
+        <div class="release-photo-section">
+            <label class="section-label">Live Photo of Proxy</label>
+            <canvas id="proxyVideoCanvas"></canvas>
+            <img id="proxyConfirmPhoto" alt="Live Photo" />
             <input type="hidden" id="proxyPhotoData" />
-            <button class="btn btn-outline" onclick="takeProxyPhoto()">Take Photo</button>
+            <button class="btn btn-outline btn-sm" onclick="takeProxyPhoto()" style="margin-top:8px;">Take Photo</button>
         </div>
-
-        <!-- Signature -->
-        <label class="section-label" style="margin-top:10px;">Proxy's Signature</label>
-        <canvas id="proxySignaturePad" width="400" height="150"
-            style="width:100%;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:crosshair;display:block;margin-bottom:8px;touch-action:none;"></canvas>
-        <button class="btn btn-outline" onclick="clearProxySignature()">Clear Signature</button>
 
         <div id="proxyConfirmError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>
-
-        <div class="confirm-actions" style="margin-top:20px;">
-            <button class="btn btn-outline" onclick="closeProxyConfirmation()">Cancel</button>
-            <button class="btn btn-confirm" onclick="confirmProxyRelease()">Confirm Release</button>
-        </div>
+        <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>
+</div>
+
+<!-- Fixed Signature Pad — always same position -->
+<div id="fixedSignatureOverlay">
+    <p class="section-label" id="fixedSignatureLabel">Signature</p>
+    <canvas id="fixedSignatureCanvas"></canvas>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn btn-outline btn-sm" onclick="clearFixedSignature()">Clear Signature</button>
+    </div>
+    <div id="fixedSignatureActions" class="confirm-actions"></div>
 </div>
 
 {% endblock %}
