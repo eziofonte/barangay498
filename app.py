@@ -480,7 +480,7 @@ def confirm_release():
 @login_required
 def seniors_list():
     seniors = Senior.query.all()
-    return {'seniors': [{'id': s.id, 'name': s.full_name, 'age': s.age} for s in seniors]}
+    return {'seniors': [{'id': s.id, 'name': s.full_name, 'age': s.age, 'address': s.address, 'photo': s.photo_path.replace('\\', '/')} for s in seniors]}
 
 # --- Reset Individual Senior Claim ---
 @app.route('/seniors/<int:senior_id>/reset-claim', methods=['POST'])

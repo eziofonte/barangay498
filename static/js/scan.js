@@ -144,9 +144,8 @@ function showConfirmation(data) {
     document.getElementById('confirmAddress').textContent = data.address;
     document.getElementById('confirmRef').textContent = 'Ref: ' + data.reference_number;
     overlay.classList.add('visible');
-
-    initSignaturePad();
     startReleaseCamera();
+    showFixedSignature("Senior's Signature", 'regular');
 }
 
 // --- Release Camera ---
@@ -229,7 +228,7 @@ async function confirmRelease() {
     const signatureCanvas = document.getElementById('signatureCanvas');
     const releaseCaptured = document.getElementById('releaseCaptured');
 
-    const signatureData = signatureCanvas.toDataURL('image/png');
+    const signatureData = getFixedSignatureData();
     const releasePhotoData = releaseCaptured.src || null;
 
     try {
@@ -246,6 +245,7 @@ async function confirmRelease() {
 
         const overlay = document.getElementById('confirmationOverlay');
         overlay.classList.remove('visible');
+        hideFixedSignature();
 
         const resultBox = document.getElementById('result');
         resultBox.style.display = 'block';
@@ -270,8 +270,8 @@ async function confirmRelease() {
 }
 
 function cancelRelease() {
-    const overlay = document.getElementById('confirmationOverlay');
-    overlay.classList.remove('visible');
+    document.getElementById('confirmationOverlay').classList.remove('visible');
+    hideFixedSignature();
     if (releaseStream) releaseStream.getTracks().forEach(t => t.stop());
     pendingMatchData = null;
     startBlinkDetection();
@@ -310,6 +310,7 @@ async function openProxyModal() {
     const data = await response.json();
     const select = document.getElementById('proxySeniorSelect');
     select.innerHTML = '<option value="">-- Select Senior --</option>';
+    window._seniorsList = data.seniors;
     data.seniors.forEach(s => {
         select.innerHTML += `<option value="${s.id}">${s.name} (Age: ${s.age})</option>`;
     });
@@ -368,13 +369,16 @@ function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captai
     // Reset confirmation fields
     document.getElementById('proxyConfirmPhoto').src = '';
     document.getElementById('proxyPhotoData').value = '';
-    document.getElementById('proxySignaturePad').getContext('2d').clearRect(0, 0, 400, 150);
     window._proxySignatureData = null;
 
     // Show the senior name
     const select = document.getElementById('proxySeniorSelect');
     const seniorName = select.options[select.selectedIndex]?.text || '';
-    document.getElementById('proxyConfirmSeniorName').textContent = seniorName.split(' (')[0];
+    const selectedSenior = window._seniorsList.find(s => s.id == senior_id);
+    document.getElementById('proxyConfirmSeniorName').textContent = selectedSenior ? selectedSenior.name : seniorName.split(' (')[0];
+    document.getElementById('proxyConfirmSeniorAge').textContent = selectedSenior ? 'Age: ' + selectedSenior.age : '';
+    document.getElementById('proxyConfirmSeniorAddress').textContent = selectedSenior ? selectedSenior.address : '';
+    document.getElementById('proxyConfirmSeniorPhoto').src = selectedSenior && selectedSenior.photo ? '/' + selectedSenior.photo.replace(/^\//, '') : '';
     document.getElementById('proxyConfirmProxyName').textContent = proxy_name;
 
     // Mirror main webcam stream into proxy video
@@ -394,12 +398,13 @@ function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captai
     }, 50);
 
     document.getElementById('proxyConfirmModal').classList.add('visible');
-    startProxySignaturePad();
+    showFixedSignature("Proxy's Signature", 'proxy');
 }
 
 function closeProxyConfirmation() {
     clearInterval(window._proxyMirrorInterval);
     document.getElementById('proxyConfirmModal').classList.remove('visible');
+    hideFixedSignature();
 }
 
 // --- Proxy signature pad ---
@@ -439,13 +444,15 @@ function takeProxyPhoto() {
     document.getElementById('proxyConfirmPhoto').style.display = 'block';
     document.getElementById('proxyConfirmPhoto').src = photoData;
     document.getElementById('proxyPhotoData').value = photoData;
+
+    document.getElementById('proxyConfirmError').style.display = 'none';
 }
 
 // --- Final proxy submission ---
 async function confirmProxyRelease() {
     const errorBox = document.getElementById('proxyConfirmError');
     const photoData = document.getElementById('proxyPhotoData').value;
-    const signatureData = window._proxySignatureData;
+    const signatureData = getFixedSignatureData();
 
     if (!photoData) {
         errorBox.textContent = 'Please take a live photo first.';
@@ -474,6 +481,7 @@ async function confirmProxyRelease() {
 
         if (data.status === 'success') {
             closeProxyConfirmation();
+            hideFixedSignature();
             const resultBox = document.getElementById('result');
             resultBox.style.display = 'block';
             resultBox.className = 'result result-match';
@@ -495,4 +503,68 @@ async function confirmProxyRelease() {
         errorBox.textContent = 'Something went wrong. Please try again.';
         errorBox.style.display = 'block';
     }
+}
+
+// --- Fixed Signature Pad ---
+let fixedSignatureCtx = null;
+let fixedSignatureDrawing = false;
+
+function initFixedSignaturePad() {
+    const canvas = document.getElementById('fixedSignatureCanvas');
+    fixedSignatureCtx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 150;
+    fixedSignatureCtx.strokeStyle = '#1a365d';
+    fixedSignatureCtx.lineWidth = 2.5;
+    fixedSignatureCtx.lineCap = 'round';
+
+    // Pointer events — works for mouse, stylus pen, and touch
+    canvas.onpointerdown = (e) => {
+        canvas.setPointerCapture(e.pointerId);
+        fixedSignatureDrawing = true;
+        fixedSignatureCtx.beginPath();
+        fixedSignatureCtx.moveTo(e.offsetX, e.offsetY);
+    };
+    canvas.onpointermove = (e) => {
+        if (!fixedSignatureDrawing) return;
+        fixedSignatureCtx.lineTo(e.offsetX, e.offsetY);
+        fixedSignatureCtx.stroke();
+    };
+    canvas.onpointerup = () => { fixedSignatureDrawing = false; };
+    canvas.onpointercancel = () => { fixedSignatureDrawing = false; };
+}
+
+function showFixedSignature(label, mode) {
+    const overlay = document.getElementById('fixedSignatureOverlay');
+    document.getElementById('fixedSignatureLabel').textContent = label;
+    const actions = document.getElementById('fixedSignatureActions');
+
+    if (mode === 'regular') {
+        actions.innerHTML = `
+            <button class="btn btn-outline" onclick="cancelRelease()">Cancel</button>
+            <button class="btn btn-confirm" onclick="confirmRelease()">Confirm Release</button>
+        `;
+    } else {
+        actions.innerHTML = `
+            <button class="btn btn-outline" onclick="closeProxyConfirmation()">Cancel</button>
+            <button class="btn btn-confirm" onclick="confirmProxyRelease()">Confirm Release</button>
+        `;
+    }
+
+    overlay.classList.add('visible');
+    clearFixedSignature();
+    initFixedSignaturePad();
+}
+
+function hideFixedSignature() {
+    document.getElementById('fixedSignatureOverlay').classList.remove('visible');
+}
+
+function clearFixedSignature() {
+    const canvas = document.getElementById('fixedSignatureCanvas');
+    if (fixedSignatureCtx) fixedSignatureCtx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function getFixedSignatureData() {
+    return document.getElementById('fixedSignatureCanvas').toDataURL('image/png');
 }
