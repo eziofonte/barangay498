@@ -42,8 +42,12 @@
             <video id="releaseVideo" autoplay playsinline></video>
             <canvas id="releaseCanvas"></canvas>
             <img id="releaseCaptured" alt="Release Photo" />
-            <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:8px;">Take Photo</button>
-            <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:8px;">Retake</button>
+            <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:16px;">Take Photo</button>
+            <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:16px;">Retake</button>
+            <div class="money-status" id="moneyStatus"></div>
+        </div>
+        <div id="regularReleaseError" style="display:none;color:#c53030;font-size:14px;margin-top:8px;text-align:left;">
+            Please take a live photo first.
         </div>
         <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>
@@ -54,24 +58,50 @@
     <div class="confirmation-box">
         <h3 style="color:#1a365d;margin-bottom:6px;">Proxy Release</h3>
         <p style="color:#718096;font-size:14px;margin-bottom:20px;">For bedridden seniors — requires Captain authorization</p>
+
+        <!-- 1. Select Senior -->
         <div class="form-group">
             <label class="section-label">Select Senior Citizen</label>
-            <select id="proxySeniorSelect" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
+            <select id="proxySeniorSelect" onchange="loadEnrolledProxies()" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
                 <option value="">-- Select Senior --</option>
             </select>
         </div>
-        <div class="form-group" style="margin-top:14px;">
-            <label class="section-label">Proxy Full Name</label>
-            <input type="text" id="proxyName" placeholder="e.g. Maria Dela Cruz" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
+
+        <!-- 2. Select Enrolled Proxy (shown after senior selected) -->
+        <div class="form-group" id="proxySelectGroup" style="display:none;margin-top:14px;">
+            <label class="section-label">Select Proxy</label>
+            <select id="proxyEnrollmentSelect" onchange="handleProxySelection()" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
+                <option value="">-- Select --</option>
+            </select>
         </div>
-        <div class="form-group" style="margin-top:14px;">
-            <label class="section-label">Relationship to Senior</label>
-            <input type="text" id="proxyRelationship" placeholder="e.g. Daughter, Son, Spouse" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
+
+        <!-- 3a. Enrolled proxy info display -->
+        <div id="enrolledProxyInfo" style="display:none;margin-top:12px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:10px 14px;">
+            <p style="font-size:14px;font-weight:700;color:#1a365d;margin-bottom:2px;" id="enrolledProxyNameDisplay"></p>
+            <p style="font-size:13px;color:#718096;" id="enrolledProxyRelDisplay"></p>
         </div>
+
+        <!-- 3b. Walk-in fields (shown when walk-in selected) -->
+        <div id="walkinFields" style="display:none;margin-top:14px;">
+            <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:10px 14px;margin-bottom:14px;">
+                <p style="font-size:13px;color:#92400e;font-weight:600;">Walk-in proxy — Captain override required</p>
+            </div>
+            <div class="form-group">
+                <label class="section-label">Proxy Full Name</label>
+                <input type="text" id="proxyName" placeholder="e.g. Maria Dela Cruz" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
+            </div>
+            <div class="form-group" style="margin-top:14px;">
+                <label class="section-label">Relationship to Senior</label>
+                <input type="text" id="proxyRelationship" placeholder="e.g. Daughter, Son, Spouse" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
+            </div>
+        </div>
+
+        <!-- 4. Captain PIN -->
         <div class="form-group" style="margin-top:14px;">
             <label class="section-label">Captain's PIN</label>
             <input type="password" id="captainPin" placeholder="Enter captain PIN" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" />
         </div>
+
         <div id="proxyError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>
         <div class="confirm-actions" style="margin-top:20px;">
             <button class="btn btn-outline" onclick="closeProxyModal()">Cancel</button>
@@ -80,7 +110,6 @@
     </div>
 </div>
 
-<!-- Proxy Confirmation Modal -->
 <!-- Proxy Confirmation Modal -->
 <div class="confirmation-overlay" id="proxyConfirmModal">
     <div class="confirmation-box">
@@ -93,12 +122,32 @@
             Proxy: <strong id="proxyConfirmProxyName"></strong>
         </p>
 
+        <!-- Side-by-side photo row -->
+        <div class="proxy-photo-row">
+            <!-- Left: enrolled face photo (hidden when walk-in) -->
+            <div id="proxyFaceComparison" class="proxy-photo-col" style="display:none;">
+                <p class="section-label">Enrolled Photo</p>
+                <img id="enrolledFacePhoto" src="" alt="Enrolled" class="proxy-photo-img" />
+            </div>
+
+            <!-- Right: live camera feed -->
+            <div class="proxy-photo-col">
+                <p class="section-label">Live Photo</p>
+                <canvas id="proxyVideoCanvas"></canvas>
+                <img id="proxyConfirmPhoto" alt="Live Photo" />
+                <input type="hidden" id="proxyPhotoData" />
+            </div>
+        </div>
+
+        <!-- Cash verification — full width -->
         <div class="release-photo-section">
-            <label class="section-label">Live Photo of Proxy</label>
-            <canvas id="proxyVideoCanvas"></canvas>
-            <img id="proxyConfirmPhoto" alt="Live Photo" />
-            <input type="hidden" id="proxyPhotoData" />
-            <button class="btn btn-outline btn-sm" onclick="takeProxyPhoto()" style="margin-top:8px;">Take Photo</button>
+            <div class="money-status" id="proxyMoneyStatus"></div>
+            <button class="btn btn-outline btn-sm" id="proxyTakePhotoBtn" onclick="takeProxyPhoto()">Take Photo</button>
+            <button class="btn btn-outline btn-sm" id="proxyRetakePhotoBtn" onclick="retakeProxyPhoto()" style="display:none;">Retake</button>
+        </div>
+
+        <div id="proxyReleaseError" style="display:none;color:#c53030;font-size:14px;margin-top:8px;text-align:left;">
+            Please take a live photo first.
         </div>
 
         <div id="proxyConfirmError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>

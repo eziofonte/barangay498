@@ -10,6 +10,11 @@ Peso-Bill-Detection-4/
 # User data
 static/proxy_faces/
 static/proxy_ids/
+static/faces/capture_*
+static/signatures/
+static/release_photos/
+dist/
+secret.key
 
 # Editor
 .vscode/

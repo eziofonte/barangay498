@@ -48,7 +48,9 @@ function switchMode(mode) {
         uploadMode.style.display = 'block';
         btnUpload.classList.add('active');
         btnCamera.classList.remove('active');
-        photoInput.setAttribute('required', 'required');
+        if (!photoInput.dataset.optional) {
+            photoInput.setAttribute('required', 'required');
+        }
         stopCamera();
     }
 }

@@ -2,6 +2,73 @@
    history.css — Transaction History Page Styles
    ============================================================ */
 
+.page-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #2f855a 0%, #276749 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    box-shadow: 0 2px 8px rgba(47, 133, 90, 0.25);
+}
+
+.btn-export:hover {
+    background: linear-gradient(135deg, #276749 0%, #1f5236 100%);
+    box-shadow: 0 4px 14px rgba(47, 133, 90, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-export-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Export Modal */
+.modal-export {
+    max-width: 480px;
+}
+
+.export-help {
+    font-size: 13px;
+    color: #4a5568;
+    line-height: 1.55;
+    margin-bottom: 22px;
+}
+
+.export-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.export-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.export-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
 .filters {
     background: white;
     padding: 20px 24px;

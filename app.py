@@ -4,16 +4,22 @@ import face_recognition
 import numpy as np
 import base64
 import uuid as uuid_module
-import os
+import os 
+from backup import schedule_backups
+from fernet_crypto import encrypt, decrypt
 from io import BytesIO
 from PIL import Image
 from flask import session
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, Response
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+from money_detection import detect_money
 from fileinput import filename
-from models import db, Official, Senior, Transaction
+from models import db, Official, Senior, Transaction, ProxyEnrollment
 from blink import detect_blink as check_blink
 from datetime import datetime, timedelta
 
@@ -29,6 +35,8 @@ app.config['SESSION_PERMANENT'] = False
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 db.init_app(app)
+
+schedule_backups()
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -165,7 +173,6 @@ def register_senior():
             return render_template('register_senior.html')
 
         # Check if face already exists using cached encodings
-        # Check if face already exists using cached encodings
         all_seniors = Senior.query.all()
         for existing_senior in all_seniors:
             try:
@@ -184,7 +191,7 @@ def register_senior():
                 results = face_recognition.compare_faces([known_encoding], new_encodings[0], tolerance=0.4)
 
                 if results[0] and distance < 0.4:
-                    flash(f'This person is already registered as {existing_senior.full_name}.')
+                    flash(f'This person is already registered as {decrypt(existing_senior.full_name)}.')
                     return render_template('register_senior.html')
             except Exception as e:
                 print(f"Encoding check error: {e}")
@@ -192,9 +199,9 @@ def register_senior():
 
         # All checks passed — save senior
         senior = Senior(
-            full_name=full_name,
+            full_name=encrypt(full_name),
             age=age,
-            address=address,
+            address=encrypt(address),
             photo_path=photo_path,
             face_encoding=json.dumps(new_encodings[0].tolist())
         )
@@ -290,9 +297,9 @@ def recognize():
                     'status': 'match',
                     'transaction_id': transaction.id,
                     'reference_number': transaction.reference_number,
-                    'name': senior.full_name,
+                    'name': decrypt(senior.full_name),
                     'age': senior.age,
-                    'address': senior.address,
+                    'address': decrypt(senior.address),
                     'photo': senior.photo_path.replace('\\', '/')
                 }
         except Exception as e:
@@ -326,15 +333,250 @@ def history():
     transactions = query.order_by(Transaction.date_released.desc()).all()
     return render_template('history.html', transactions=transactions, search=search, date_filter=date_filter)
 
+# --- Export Analytics Report (Excel) ---
+@app.route('/export-analytics', methods=['GET', 'POST'])
+@login_required
+def export_analytics():
+    date_from_str = request.values.get('date_from')
+    date_to_str   = request.values.get('date_to')
+
+    if not date_from_str or not date_to_str:
+        flash('Please provide both a start date and an end date.')
+        return redirect(url_for('history'))
+
+    try:
+        date_from = datetime.strptime(date_from_str, '%Y-%m-%d')
+        date_to_inclusive = datetime.strptime(date_to_str, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        flash('Invalid date format. Please use the date pickers.')
+        return redirect(url_for('history'))
+
+    if date_from > date_to_inclusive:
+        flash('"From" date must be before "To" date.')
+        return redirect(url_for('history'))
+
+    # Claimed: every Released transaction in range
+    claimed_txs = Transaction.query.filter(
+        Transaction.status == 'Released',
+        Transaction.date_released >= date_from,
+        Transaction.date_released <= date_to_inclusive
+    ).order_by(Transaction.date_released.asc()).all()
+
+    # Unclaimed: seniors with no Released transaction in range
+    claimed_senior_ids = {t.senior_id for t in claimed_txs}
+    if claimed_senior_ids:
+        unclaimed_seniors = Senior.query.filter(~Senior.id.in_(claimed_senior_ids)).all()
+    else:
+        unclaimed_seniors = Senior.query.all()
+
+    # ── Excel Workbook ─────────────────────────────────────────────────────
+    wb = Workbook()
+
+    title_font   = Font(name='Calibri', size=14, bold=True, color='FFFFFF')
+    sub_font     = Font(name='Calibri', size=10, italic=True, color='4A5568')
+    header_font  = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    summary_font = Font(name='Calibri', size=11, bold=True, color='1A365D')
+
+    claimed_title_fill    = PatternFill(start_color='2E7D32', end_color='2E7D32', fill_type='solid')
+    claimed_header_fill   = PatternFill(start_color='1B5E20', end_color='1B5E20', fill_type='solid')
+    unclaimed_title_fill  = PatternFill(start_color='C62828', end_color='C62828', fill_type='solid')
+    unclaimed_header_fill = PatternFill(start_color='B71C1C', end_color='B71C1C', fill_type='solid')
+    alt_row_fill          = PatternFill(start_color='F7FAFC', end_color='F7FAFC', fill_type='solid')
+    summary_fill          = PatternFill(start_color='EDF2F7', end_color='EDF2F7', fill_type='solid')
+
+    center      = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_align  = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+    right_align = Alignment(horizontal='right',  vertical='center')
+
+    thin   = Side(border_style='thin', color='CBD5E0')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    range_label = f'Date Range: {date_from.strftime("%B %d, %Y")} to {datetime.strptime(date_to_str, "%Y-%m-%d").strftime("%B %d, %Y")}'
+    generated_label = f'Generated: {datetime.now().strftime("%B %d, %Y %I:%M %p")}'
+    subtitle_text = f'{range_label}  |  {generated_label}'
+
+    def autofit(ws, headers, data_start_row=4):
+        max_row = ws.max_row
+        for col_idx in range(1, len(headers) + 1):
+            col_letter = get_column_letter(col_idx)
+            max_len = len(str(headers[col_idx - 1]))
+            for r in range(data_start_row, max_row + 1):
+                cell = ws.cell(row=r, column=col_idx)
+                if cell.value is not None:
+                    l = len(str(cell.value))
+                    if l > max_len:
+                        max_len = l
+            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 50)
+
+    # ── Sheet 1: Claimed ───────────────────────────────────────────────────
+    ws1 = wb.active
+    ws1.title = 'Claimed'
+
+    headers1 = ['No.', 'Senior Name', 'Age', 'Address', 'Amount Released',
+                'Date Released', 'Reference Number', 'Release Type',
+                'Proxy Name', 'Released By']
+    n_cols1 = len(headers1)
+
+    ws1.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n_cols1)
+    title_cell = ws1.cell(row=1, column=1, value='Claimed Allowance Report')
+    title_cell.font = title_font
+    title_cell.fill = claimed_title_fill
+    title_cell.alignment = center
+    ws1.row_dimensions[1].height = 28
+
+    ws1.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_cols1)
+    sub_cell = ws1.cell(row=2, column=1, value=subtitle_text)
+    sub_cell.font = sub_font
+    sub_cell.alignment = center
+    ws1.row_dimensions[2].height = 18
+
+    for col, h in enumerate(headers1, start=1):
+        c = ws1.cell(row=4, column=col, value=h)
+        c.font = header_font
+        c.fill = claimed_header_fill
+        c.alignment = center
+        c.border = border
+    ws1.row_dimensions[4].height = 24
+
+    total_amount = 0.0
+    for i, t in enumerate(claimed_txs, start=1):
+        row_num = 4 + i
+        senior = t.senior
+        senior_name = senior.display_name if senior else ''
+        senior_age = senior.age if senior else ''
+        senior_addr = senior.display_address if senior else ''
+
+        values = [
+            i,
+            senior_name,
+            senior_age,
+            senior_addr,
+            float(t.amount or 0),
+            t.date_released.strftime('%b %d, %Y %I:%M %p') if t.date_released else '',
+            t.reference_number or '',
+            t.release_type or 'Direct',
+            t.proxy_name if (t.release_type == 'Proxy' and t.proxy_name) else '',
+            t.released_by or ''
+        ]
+        for col, v in enumerate(values, start=1):
+            c = ws1.cell(row=row_num, column=col, value=v)
+            c.border = border
+            if col in (2, 4, 9, 10):
+                c.alignment = left_align
+            else:
+                c.alignment = center
+            if col == 5:
+                c.number_format = '"₱"#,##0.00'
+            if i % 2 == 0:
+                c.fill = alt_row_fill
+        total_amount += float(t.amount or 0)
+
+    summary_row1 = 4 + len(claimed_txs) + 1
+    ws1.merge_cells(start_row=summary_row1, start_column=1, end_row=summary_row1, end_column=4)
+    label1 = ws1.cell(row=summary_row1, column=1,
+                      value=f'TOTAL  ({len(claimed_txs)} transaction{"s" if len(claimed_txs) != 1 else ""})')
+    label1.font = summary_font
+    label1.fill = summary_fill
+    label1.alignment = right_align
+
+    total_cell = ws1.cell(row=summary_row1, column=5, value=total_amount)
+    total_cell.font = summary_font
+    total_cell.fill = summary_fill
+    total_cell.number_format = '"₱"#,##0.00'
+    total_cell.alignment = center
+
+    for col in range(6, n_cols1 + 1):
+        c = ws1.cell(row=summary_row1, column=col, value='')
+        c.fill = summary_fill
+    for col in range(1, n_cols1 + 1):
+        ws1.cell(row=summary_row1, column=col).border = border
+    ws1.row_dimensions[summary_row1].height = 22
+
+    autofit(ws1, headers1)
+
+    # ── Sheet 2: Unclaimed ─────────────────────────────────────────────────
+    ws2 = wb.create_sheet('Unclaimed')
+
+    headers2 = ['No.', 'Senior Name', 'Age', 'Address', 'Status']
+    n_cols2 = len(headers2)
+
+    ws2.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n_cols2)
+    title2 = ws2.cell(row=1, column=1, value='Unclaimed Allowance Report')
+    title2.font = title_font
+    title2.fill = unclaimed_title_fill
+    title2.alignment = center
+    ws2.row_dimensions[1].height = 28
+
+    ws2.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_cols2)
+    sub2 = ws2.cell(row=2, column=1, value=subtitle_text)
+    sub2.font = sub_font
+    sub2.alignment = center
+    ws2.row_dimensions[2].height = 18
+
+    for col, h in enumerate(headers2, start=1):
+        c = ws2.cell(row=4, column=col, value=h)
+        c.font = header_font
+        c.fill = unclaimed_header_fill
+        c.alignment = center
+        c.border = border
+    ws2.row_dimensions[4].height = 24
+
+    for i, sr in enumerate(unclaimed_seniors, start=1):
+        row_num = 4 + i
+        values = [
+            i,
+            sr.display_name,
+            sr.age,
+            sr.display_address,
+            'Not Yet Claimed'
+        ]
+        for col, v in enumerate(values, start=1):
+            c = ws2.cell(row=row_num, column=col, value=v)
+            c.border = border
+            c.alignment = left_align if col in (2, 4) else center
+            if i % 2 == 0:
+                c.fill = alt_row_fill
+
+    summary_row2 = 4 + len(unclaimed_seniors) + 1
+    ws2.merge_cells(start_row=summary_row2, start_column=1, end_row=summary_row2, end_column=4)
+    label2 = ws2.cell(row=summary_row2, column=1,
+                      value=f'TOTAL UNCLAIMED  ({len(unclaimed_seniors)} senior{"s" if len(unclaimed_seniors) != 1 else ""})')
+    label2.font = summary_font
+    label2.fill = summary_fill
+    label2.alignment = right_align
+
+    count_cell = ws2.cell(row=summary_row2, column=5, value=len(unclaimed_seniors))
+    count_cell.font = summary_font
+    count_cell.fill = summary_fill
+    count_cell.alignment = center
+
+    for col in range(1, n_cols2 + 1):
+        ws2.cell(row=summary_row2, column=col).border = border
+    ws2.row_dimensions[summary_row2].height = 22
+
+    autofit(ws2, headers2)
+
+    # ── Send file ──────────────────────────────────────────────────────────
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f'analytics_{date_from.strftime("%Y%m%d")}_to_{datetime.strptime(date_to_str, "%Y-%m-%d").strftime("%Y%m%d")}.xlsx'
+    return Response(
+        buf.read(),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
 # --- Edit Senior ---
 @app.route('/seniors/<int:senior_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_senior(senior_id):
     senior = Senior.query.get_or_404(senior_id)
     if request.method == 'POST':
-        senior.full_name = request.form.get('full_name')
+        senior.full_name = encrypt(request.form.get('full_name'))
         senior.age = request.form.get('age')
-        senior.address = request.form.get('address')
+        senior.address = encrypt(request.form.get('address'))
 
         photo = request.files.get('photo')
         if photo and allowed_file(photo.filename):
@@ -480,7 +722,7 @@ def confirm_release():
 @login_required
 def seniors_list():
     seniors = Senior.query.all()
-    return {'seniors': [{'id': s.id, 'name': s.full_name, 'age': s.age, 'address': s.address, 'photo': s.photo_path.replace('\\', '/')} for s in seniors]}
+    return {'seniors': [{'id': s.id, 'name': decrypt(s.full_name), 'age': s.age, 'address': decrypt(s.address), 'photo': s.photo_path.replace('\\', '/')} for s in seniors]}
 
 # --- Reset Individual Senior Claim ---
 @app.route('/seniors/<int:senior_id>/reset-claim', methods=['POST'])
@@ -523,12 +765,13 @@ def detect_blink_route():
 def proxy_release():
     from werkzeug.security import check_password_hash
     data = request.get_json()
-    captain_pin = data.get('captain_pin')
-    senior_id = data.get('senior_id')
-    proxy_name = data.get('proxy_name')
-    proxy_relationship = data.get('proxy_relationship')
-    signature_data = data.get('signature')
-    release_photo_data = data.get('release_photo')
+    captain_pin         = data.get('captain_pin')
+    senior_id           = data.get('senior_id')
+    proxy_name          = data.get('proxy_name')
+    proxy_relationship  = data.get('proxy_relationship')
+    proxy_enrollment_id = data.get('proxy_enrollment_id')
+    signature_data      = data.get('signature')
+    release_photo_data  = data.get('release_photo')
 
     # Verify captain PIN
     captain = Official.query.filter_by(role='captain').first()
@@ -560,7 +803,8 @@ def proxy_release():
         status='Released',
         release_type='Proxy',
         proxy_name=proxy_name,
-        proxy_relationship=proxy_relationship
+        proxy_relationship=proxy_relationship,
+        proxy_enrollment_id=proxy_enrollment_id if proxy_enrollment_id else None
     )
     db.session.add(transaction)
     db.session.flush()
@@ -612,12 +856,152 @@ def verify_captain_pin():
 @app.route('/fix-captain')
 @login_required
 def fix_captain():
-    from werkzeug.security import generate_password_hash
     admin = Official.query.filter_by(username='admin').first()
     admin.role = 'captain'
     admin.captain_pin = generate_password_hash('captain1234')
     db.session.commit()
     return {'status': 'done', 'message': 'Admin is now captain with PIN: captain1234'}
+
+@app.route('/detect-money', methods=['POST'])
+@login_required
+def detect_money_route():
+    data = request.get_json()
+    image_data = data.get('image')
+
+    if not image_data or not image_data.startswith('data:image'):
+        return {'detected': False}
+
+    image_bytes = base64.b64decode(image_data.split(',')[1])
+    return detect_money(image_bytes)
+
+@app.route('/admin/reset-captain-pin', methods=['GET', 'POST'])
+@login_required
+def reset_captain_pin():
+    message = None
+    error = None
+
+    if request.method == 'POST':
+        admin_password = request.form.get('admin_password')
+        new_pin = (request.form.get('new_pin') or '').strip()
+        confirm_pin = request.form.get('confirm_pin')
+
+        if not check_password_hash(current_user.password, admin_password):
+            error = 'Incorrect admin password.'
+        elif len(new_pin) < 4:
+            error = 'PIN must be at least 4 characters.'
+        elif new_pin != confirm_pin:
+            error = 'PINs do not match.'
+        else:
+            captain = Official.query.filter_by(role='captain').first()
+            if not captain:
+                error = 'No captain account found.'
+            else:
+                captain.captain_pin = generate_password_hash(new_pin)
+                db.session.commit()
+                message = 'Captain PIN successfully updated.'
+
+    return render_template('reset_captain_pin.html', message=message, error=error)
+
+# ── Proxy Management ──────────────────────────────────────────────────────────
+
+@app.route('/proxy-management')
+@login_required
+def proxy_management():
+    if current_user.role not in ('captain', 'admin'):
+        return redirect(url_for('index'))
+    seniors     = Senior.query.order_by(Senior.full_name).all()
+    enrollments = ProxyEnrollment.query.order_by(ProxyEnrollment.enrolled_at.desc()).all()
+    return render_template('proxy_management.html', seniors=seniors, enrollments=enrollments)
+
+
+@app.route('/enroll-proxy', methods=['POST'])
+@login_required
+def enroll_proxy():
+    if current_user.role not in ('captain', 'admin'):
+        return redirect(url_for('index'))
+
+    senior_id    = request.form.get('senior_id')
+    full_name    = (request.form.get('full_name')    or '').strip()
+    relationship = (request.form.get('relationship') or '').strip()
+    id_type      = (request.form.get('id_type')      or '').strip()
+    id_number    = (request.form.get('id_number')    or '').strip()
+
+    if not all([senior_id, full_name, relationship, id_type, id_number]):
+        flash('All fields are required.', 'error')
+        return redirect(url_for('proxy_management'))
+
+    os.makedirs('static/proxy_ids',    exist_ok=True)
+    os.makedirs('static/proxy_faces',  exist_ok=True)
+
+    def save_upload(field, folder, prefix):
+        f = request.files.get(field)
+        if not f or not f.filename:
+            return None
+        ext      = f.filename.rsplit('.', 1)[-1].lower()
+        filename = f"{prefix}_{uuid_module.uuid4().hex[:8]}.{ext}"
+        path     = os.path.join(folder, filename)
+        f.save(path)
+        return path
+
+    id_photo_path   = save_upload('id_photo',   'static/proxy_ids',   f"id_{senior_id}")
+    face_photo_path = save_upload('face_photo', 'static/proxy_faces', f"face_{senior_id}")
+
+    if not id_photo_path:
+        flash('ID photo is required.', 'error')
+        return redirect(url_for('proxy_management'))
+
+    enrollment = ProxyEnrollment(
+        senior_id    = senior_id,
+        full_name=encrypt(full_name),
+        relationship = relationship,
+        id_type      = id_type,
+        id_number=encrypt(id_number),
+        id_photo     = id_photo_path,
+        face_photo   = face_photo_path,
+        enrolled_by  = current_user.id
+    )
+    db.session.add(enrollment)
+    db.session.commit()
+    flash(f'{full_name} enrolled as proxy successfully.', 'success')
+    return redirect(url_for('proxy_management'))
+
+
+@app.route('/proxy-enrollment/<int:enrollment_id>/toggle', methods=['POST'])
+@login_required
+def toggle_proxy_enrollment(enrollment_id):
+    if current_user.role not in ('captain', 'admin'):
+        return redirect(url_for('index'))
+    enrollment           = ProxyEnrollment.query.get_or_404(enrollment_id)
+    enrollment.is_active = not enrollment.is_active
+    db.session.commit()
+    return redirect(url_for('proxy_management'))
+
+
+@app.route('/proxy-enrollment/<int:enrollment_id>/delete', methods=['POST'])
+@login_required
+def delete_proxy_enrollment(enrollment_id):
+    if current_user.role not in ('captain', 'admin'):
+        return redirect(url_for('index'))
+    enrollment = ProxyEnrollment.query.get_or_404(enrollment_id)
+    db.session.delete(enrollment)
+    db.session.commit()
+    flash('Proxy enrollment removed.', 'success')
+    return redirect(url_for('proxy_management'))
+
+
+@app.route('/enrolled-proxies/<int:senior_id>')
+@login_required
+def enrolled_proxies(senior_id):
+    proxies = ProxyEnrollment.query.filter_by(senior_id=senior_id, is_active=True).all()
+    return {
+        'proxies': [{
+            'id':           p.id,
+            'full_name':    decrypt(p.full_name),
+            'relationship': p.relationship,
+            'face_photo':   p.face_photo.replace('\\', '/') if p.face_photo else None
+        } for p in proxies]
+    }
+
 
 if __name__ == '__main__':
     app.run(debug=True)

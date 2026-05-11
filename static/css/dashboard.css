@@ -13,6 +13,12 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(26, 86, 160, 0.12);
 }
 
 .stat-card:nth-child(1) { border-left: 4px solid #1a56a0; }
@@ -31,6 +37,7 @@
 .progress-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 14px;
     color: #4a5568;
     margin-bottom: 10px;
@@ -41,13 +48,32 @@
     border-radius: 999px;
     height: 12px;
     overflow: hidden;
+    position: relative;
 }
 
 .progress-bar-fill {
     height: 100%;
     border-radius: 999px;
     background: linear-gradient(90deg, #1a56a0, #3b82f6);
-    transition: width 1s ease;
+    transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+}
+
+/* Shimmer when fully claimed */
+.progress-bar-fill.complete::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }
 
 .progress-label {
@@ -55,9 +81,34 @@
     color: #718096;
     margin-top: 6px;
     text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
 }
 
-/* Icon container — holds either an <img> or a placeholder */
+.progress-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #276749;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress-check.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Icon container */
 .stat-icon {
     width: 64px;
     height: 64px;
@@ -67,6 +118,12 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.05);
+    background: #dbeafe;
 }
 
 .stat-icon img {
@@ -75,7 +132,6 @@
     object-fit: contain;
 }
 
-/* Placeholder until real icons are provided */
 .stat-icon .icon-placeholder {
     width: 32px;
     height: 32px;
@@ -111,17 +167,21 @@
     text-align: center;
     text-decoration: none;
     color: #2d3748;
-    transition: all 0.2s;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     border: 2px solid transparent;
 }
 
 .action-card:hover {
     border-color: #1a56a0;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(26,86,160,0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(26,86,160,0.18);
 }
 
-/* Icon in action card — replace placeholder with real icon */
+.action-card:active {
+    transform: translateY(-1px) scale(0.98);
+    transition-duration: 0.08s;
+}
+
 .action-card .card-icon {
     width: 56px;
     height: 56px;
@@ -131,6 +191,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+}
+
+.action-card:hover .card-icon {
+    transform: scale(1.12) rotate(-3deg);
+    background: #dbeafe;
 }
 
 .action-card .card-icon img {
@@ -139,7 +205,6 @@
     object-fit: contain;
 }
 
-/* Placeholder box for icon */
 .action-card .card-icon .icon-placeholder {
     width: 28px;
     height: 28px;
@@ -158,4 +223,36 @@
     font-size: 13px;
     color: #718096;
     margin-top: 4px;
+}
+
+/* --- Entrance animations --- */
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes fade-rise {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header {
+        animation: fade-rise 0.4s ease-out both;
+    }
+
+    .stats-grid .stat-card {
+        animation: fade-rise 0.45s ease-out both;
+    }
+    .stats-grid .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stats-grid .stat-card:nth-child(2) { animation-delay: 0.12s; }
+    .stats-grid .stat-card:nth-child(3) { animation-delay: 0.19s; }
+    .stats-grid .stat-card:nth-child(4) { animation-delay: 0.26s; }
+
+    .progress-section {
+        animation: fade-rise 0.45s ease-out 0.32s both;
+    }
+
+    .actions-grid .action-card {
+        animation: fade-rise 0.45s ease-out both;
+    }
+    .actions-grid .action-card:nth-child(1) { animation-delay: 0.40s; }
+    .actions-grid .action-card:nth-child(2) { animation-delay: 0.46s; }
+    .actions-grid .action-card:nth-child(3) { animation-delay: 0.52s; }
+    .actions-grid .action-card:nth-child(4) { animation-delay: 0.58s; }
 }
