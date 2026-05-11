@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Reset Captain PIN — System Prof Elect{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Reset Captain PIN</h2>
+    <p>Enter your admin password to set a new Captain PIN</p>
+</div>
+
+<div class="card" style="max-width:440px;margin:0 auto;padding:32px;">
+
+    {% if message %}
+    <div style="background:#f0fff4;border:1px solid #9ae6b4;color:#276749;padding:14px;border-radius:8px;margin-bottom:20px;font-weight:600;">
+        ✓ {{ message }}
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div style="background:#fff5f5;border:1px solid #feb2b2;color:#c53030;padding:14px;border-radius:8px;margin-bottom:20px;font-weight:600;">
+        ✗ {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST">
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:700;color:#4a5568;display:block;margin-bottom:6px;">Admin Password</label>
+            <input type="password" name="admin_password" placeholder="Enter your admin password"
+                style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" required />
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:700;color:#4a5568;display:block;margin-bottom:6px;">New Captain PIN</label>
+            <input type="password" name="new_pin" placeholder="Enter new PIN"
+                style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" required />
+        </div>
+
+        <div class="form-group" style="margin-bottom:24px;">
+            <label style="font-size:13px;font-weight:700;color:#4a5568;display:block;margin-bottom:6px;">Confirm New PIN</label>
+            <input type="password" name="confirm_pin" placeholder="Re-enter new PIN"
+                style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;">
+            Reset Captain PIN
+        </button>
+    </form>
+</div>
+{% endblock %}
