@@ -1,14 +1,15 @@
-New-Item .gitignore -ItemType File
-```
+# Model files
+*.pt
 
-Then open it in VSCode and add:
-```
-dist/
-build/
-*.spec
-__pycache__/
-*.pyc
-instance/
-static/faces/
-static/signatures/
-static/release_photos/
+# Training outputs
+runs/
+bundle/
+webcam_training/
+Peso-Bill-Detection-4/
+
+# User data
+static/proxy_faces/
+static/proxy_ids/
+
+# Editor
+.vscode/
