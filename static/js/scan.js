@@ -143,6 +143,7 @@ function showConfirmation(data) {
     document.getElementById('confirmAge').textContent = 'Age: ' + data.age;
     document.getElementById('confirmAddress').textContent = data.address;
     document.getElementById('confirmRef').textContent = 'Ref: ' + data.reference_number;
+    clearMoneyStatus('moneyStatus');
     overlay.classList.add('visible');
     startReleaseCamera();
     showFixedSignature("Senior's Signature", 'regular');
@@ -165,14 +166,23 @@ function captureReleasePhoto() {
     const captured = document.getElementById('releaseCaptured');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
     const imageData = canvas.toDataURL('image/jpeg');
     captured.src = imageData;
     captured.style.display = 'block';
     video.style.display = 'none';
     document.getElementById('captureReleaseBtn').style.display = 'none';
-    document.getElementById('retakeReleaseBtn').style.display = 'inline-block';
+    const retakeBtn = document.getElementById('retakeReleaseBtn');
+    retakeBtn.style.display = 'inline-block';
     if (releaseStream) releaseStream.getTracks().forEach(t => t.stop());
+    const err = document.getElementById('regularReleaseError');
+    if (err) err.style.display = 'none';
+    runMoneyDetection(imageData, 'moneyStatus');
+    retakeBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function retakeReleasePhoto() {
@@ -180,6 +190,7 @@ function retakeReleasePhoto() {
     document.getElementById('releaseVideo').style.display = 'block';
     document.getElementById('captureReleaseBtn').style.display = 'inline-block';
     document.getElementById('retakeReleaseBtn').style.display = 'none';
+    clearMoneyStatus('moneyStatus');
     startReleaseCamera();
 }
 
@@ -225,8 +236,16 @@ function clearSignature() {
 
 // --- Confirm Release ---
 async function confirmRelease() {
-    const signatureCanvas = document.getElementById('signatureCanvas');
     const releaseCaptured = document.getElementById('releaseCaptured');
+    const errorBox = document.getElementById('regularReleaseError');
+
+    // Check if live photo was taken
+    if (!releaseCaptured.src || releaseCaptured.style.display === 'none') {
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    errorBox.style.display = 'none';
 
     const signatureData = getFixedSignatureData();
     const releasePhotoData = releaseCaptured.src || null;
@@ -304,8 +323,9 @@ function startAutoClear(resultBox) {
 }
 
 // --- Proxy Release ---
+window._enrolledProxies = [];
+
 async function openProxyModal() {
-    // Load seniors list
     const response = await fetch('/seniors-list');
     const data = await response.json();
     const select = document.getElementById('proxySeniorSelect');
@@ -319,26 +339,118 @@ async function openProxyModal() {
     document.getElementById('captainPin').value = '';
     document.getElementById('proxyName').value = '';
     document.getElementById('proxyRelationship').value = '';
+    document.getElementById('proxySelectGroup').style.display = 'none';
+    document.getElementById('enrolledProxyInfo').style.display = 'none';
+    document.getElementById('walkinFields').style.display = 'none';
+    document.getElementById('proxyEnrollmentSelect').value = '';
+    window._enrolledProxies = [];
 }
 
 function closeProxyModal() {
     document.getElementById('proxyModal').classList.remove('visible');
 }
 
+async function loadEnrolledProxies() {
+    const senior_id = document.getElementById('proxySeniorSelect').value;
+    const selectGroup = document.getElementById('proxySelectGroup');
+    const enrolledInfo = document.getElementById('enrolledProxyInfo');
+    const walkinFields = document.getElementById('walkinFields');
+
+    enrolledInfo.style.display = 'none';
+    walkinFields.style.display = 'none';
+
+    if (!senior_id) {
+        selectGroup.style.display = 'none';
+        window._enrolledProxies = [];
+        return;
+    }
+
+    const response = await fetch(`/enrolled-proxies/${senior_id}`);
+    const data = await response.json();
+    window._enrolledProxies = data.proxies || [];
+
+    const select = document.getElementById('proxyEnrollmentSelect');
+    select.innerHTML = '<option value="">-- Select --</option>';
+    window._enrolledProxies.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${p.full_name} (${p.relationship})</option>`;
+    });
+    select.innerHTML += '<option value="walkin">Walk-in (not pre-enrolled)</option>';
+
+    selectGroup.style.display = 'block';
+}
+
+function handleProxySelection() {
+    const value = document.getElementById('proxyEnrollmentSelect').value;
+    const enrolledInfo = document.getElementById('enrolledProxyInfo');
+    const walkinFields = document.getElementById('walkinFields');
+
+    if (!value) {
+        enrolledInfo.style.display = 'none';
+        walkinFields.style.display = 'none';
+        return;
+    }
+
+    if (value === 'walkin') {
+        enrolledInfo.style.display = 'none';
+        walkinFields.style.display = 'block';
+    } else {
+        const proxy = window._enrolledProxies.find(p => p.id == value);
+        if (proxy) {
+            document.getElementById('enrolledProxyNameDisplay').textContent = proxy.full_name;
+            document.getElementById('enrolledProxyRelDisplay').textContent = proxy.relationship;
+        }
+        enrolledInfo.style.display = 'block';
+        walkinFields.style.display = 'none';
+    }
+}
+
 async function submitProxyRelease() {
     const senior_id = document.getElementById('proxySeniorSelect').value;
-    const proxy_name = document.getElementById('proxyName').value.trim();
-    const proxy_relationship = document.getElementById('proxyRelationship').value.trim();
+    const enrollmentValue = document.getElementById('proxyEnrollmentSelect').value;
     const captain_pin = document.getElementById('captainPin').value;
     const errorBox = document.getElementById('proxyError');
 
-    if (!senior_id || !proxy_name || !proxy_relationship || !captain_pin) {
-        errorBox.textContent = 'Please fill in all fields.';
+    if (!senior_id) {
+        errorBox.textContent = 'Please select a senior citizen.';
+        errorBox.style.display = 'block';
+        return;
+    }
+    if (!enrollmentValue) {
+        errorBox.textContent = 'Please select a proxy or choose Walk-in.';
+        errorBox.style.display = 'block';
+        return;
+    }
+    if (!captain_pin) {
+        errorBox.textContent = "Please enter the Captain's PIN.";
         errorBox.style.display = 'block';
         return;
     }
 
-    // Verify PIN first before showing confirmation
+    let proxy_name, proxy_relationship, proxy_enrollment_id, facePhoto;
+
+    if (enrollmentValue === 'walkin') {
+        proxy_name = document.getElementById('proxyName').value.trim();
+        proxy_relationship = document.getElementById('proxyRelationship').value.trim();
+        if (!proxy_name || !proxy_relationship) {
+            errorBox.textContent = 'Please fill in proxy name and relationship.';
+            errorBox.style.display = 'block';
+            return;
+        }
+        proxy_enrollment_id = null;
+        facePhoto = null;
+    } else {
+        const proxy = window._enrolledProxies.find(p => p.id == enrollmentValue);
+        if (!proxy) {
+            errorBox.textContent = 'Selected proxy not found. Please try again.';
+            errorBox.style.display = 'block';
+            return;
+        }
+        proxy_name = proxy.full_name;
+        proxy_relationship = proxy.relationship;
+        proxy_enrollment_id = proxy.id;
+        facePhoto = proxy.face_photo || null;
+    }
+
     try {
         const verifyResponse = await fetch('/verify-captain-pin', {
             method: 'POST',
@@ -357,43 +469,48 @@ async function submitProxyRelease() {
         return;
     }
 
-    // PIN verified — close proxy modal and show proxy confirmation
     closeProxyModal();
-    openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin);
+    openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin, proxy_enrollment_id, facePhoto);
 }
 
-function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin) {
-    // Store proxy details for later
-    window._proxyData = { senior_id, proxy_name, proxy_relationship, captain_pin };
+function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captain_pin, proxy_enrollment_id, facePhoto) {
+    window._proxyData = { senior_id, proxy_name, proxy_relationship, captain_pin, proxy_enrollment_id };
 
-    // Reset confirmation fields
     document.getElementById('proxyConfirmPhoto').src = '';
     document.getElementById('proxyPhotoData').value = '';
-    window._proxySignatureData = null;
 
-    // Show the senior name
-    const select = document.getElementById('proxySeniorSelect');
-    const seniorName = select.options[select.selectedIndex]?.text || '';
     const selectedSenior = window._seniorsList.find(s => s.id == senior_id);
-    document.getElementById('proxyConfirmSeniorName').textContent = selectedSenior ? selectedSenior.name : seniorName.split(' (')[0];
+    document.getElementById('proxyConfirmSeniorName').textContent = selectedSenior ? selectedSenior.name : '';
     document.getElementById('proxyConfirmSeniorAge').textContent = selectedSenior ? 'Age: ' + selectedSenior.age : '';
     document.getElementById('proxyConfirmSeniorAddress').textContent = selectedSenior ? selectedSenior.address : '';
     document.getElementById('proxyConfirmSeniorPhoto').src = selectedSenior && selectedSenior.photo ? '/' + selectedSenior.photo.replace(/^\//, '') : '';
     document.getElementById('proxyConfirmProxyName').textContent = proxy_name;
 
-    // Mirror main webcam stream into proxy video
-    // Start mirroring main video to proxy canvas
+    const facePanel = document.getElementById('proxyFaceComparison');
+    if (facePhoto) {
+        document.getElementById('enrolledFacePhoto').src = '/' + facePhoto;
+        facePanel.style.display = 'block';
+    } else {
+        facePanel.style.display = 'none';
+    }
+
     const mainVideo = document.getElementById('video');
     const proxyCanvas = document.getElementById('proxyVideoCanvas');
     proxyCanvas.width = mainVideo.videoWidth;
     proxyCanvas.height = mainVideo.videoHeight;
     proxyCanvas.style.display = 'block';
     document.getElementById('proxyConfirmPhoto').style.display = 'none';
-    document.getElementById('proxyPhotoData').value = '';
+    document.getElementById('proxyTakePhotoBtn').style.display = 'inline-block';
+    document.getElementById('proxyRetakePhotoBtn').style.display = 'none';
+    clearMoneyStatus('proxyMoneyStatus');
 
     window._proxyMirrorInterval = setInterval(() => {
         if (mainVideo.readyState >= 2) {
-            proxyCanvas.getContext('2d').drawImage(mainVideo, 0, 0, proxyCanvas.width, proxyCanvas.height);
+            const ctx = proxyCanvas.getContext('2d');
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(mainVideo, -proxyCanvas.width, 0, proxyCanvas.width, proxyCanvas.height);
+            ctx.restore();
         }
     }, 50);
 
@@ -437,7 +554,11 @@ function takeProxyPhoto() {
     const canvas = document.createElement('canvas');
     canvas.width = mainVideo.videoWidth;
     canvas.height = mainVideo.videoHeight;
-    canvas.getContext('2d').drawImage(mainVideo, 0, 0);
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(mainVideo, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
     const photoData = canvas.toDataURL('image/jpeg');
 
     document.getElementById('proxyVideoCanvas').style.display = 'none';
@@ -445,7 +566,40 @@ function takeProxyPhoto() {
     document.getElementById('proxyConfirmPhoto').src = photoData;
     document.getElementById('proxyPhotoData').value = photoData;
 
+    document.getElementById('proxyTakePhotoBtn').style.display = 'none';
+    document.getElementById('proxyRetakePhotoBtn').style.display = 'inline-block';
+
     document.getElementById('proxyConfirmError').style.display = 'none';
+    const releaseErr = document.getElementById('proxyReleaseError');
+    if (releaseErr) releaseErr.style.display = 'none';
+    runMoneyDetection(photoData, 'proxyMoneyStatus');
+}
+
+function retakeProxyPhoto() {
+    document.getElementById('proxyConfirmPhoto').style.display = 'none';
+    document.getElementById('proxyConfirmPhoto').src = '';
+    document.getElementById('proxyPhotoData').value = '';
+    document.getElementById('proxyVideoCanvas').style.display = 'block';
+
+    document.getElementById('proxyRetakePhotoBtn').style.display = 'none';
+    document.getElementById('proxyTakePhotoBtn').style.display = 'inline-block';
+    clearMoneyStatus('proxyMoneyStatus');
+
+    const mainVideo = document.getElementById('video');
+    const proxyCanvas = document.getElementById('proxyVideoCanvas');
+    proxyCanvas.width = mainVideo.videoWidth;
+    proxyCanvas.height = mainVideo.videoHeight;
+
+    clearInterval(window._proxyMirrorInterval);
+    window._proxyMirrorInterval = setInterval(() => {
+        if (mainVideo.readyState >= 2) {
+            const ctx = proxyCanvas.getContext('2d');
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(mainVideo, -proxyCanvas.width, 0, proxyCanvas.width, proxyCanvas.height);
+            ctx.restore();
+        }
+    }, 50);
 }
 
 // --- Final proxy submission ---
@@ -465,7 +619,7 @@ async function confirmProxyRelease() {
         return;
     }
 
-    const { senior_id, proxy_name, proxy_relationship, captain_pin } = window._proxyData;
+    const { senior_id, proxy_name, proxy_relationship, captain_pin, proxy_enrollment_id } = window._proxyData;
 
     try {
         const response = await fetch('/proxy-release', {
@@ -473,6 +627,7 @@ async function confirmProxyRelease() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 senior_id, proxy_name, proxy_relationship, captain_pin,
+                proxy_enrollment_id: proxy_enrollment_id || null,
                 release_photo: photoData,
                 signature: signatureData
             })
@@ -482,16 +637,24 @@ async function confirmProxyRelease() {
         if (data.status === 'success') {
             closeProxyConfirmation();
             hideFixedSignature();
+
+            const senior = (window._seniorsList || []).find(s => s.id == senior_id) || {};
+            const photoPath = senior.photo ? '/' + senior.photo.replace(/^\//, '') : '';
+
             const resultBox = document.getElementById('result');
             resultBox.style.display = 'block';
             resultBox.className = 'result result-match';
             resultBox.innerHTML = `
-                <div class="result-info">
-                    <h3>Proxy Release Authorized</h3>
-                    <p><strong>Senior:</strong> ${data.senior_name}</p>
-                    <p><strong>Proxy:</strong> ${data.proxy_name}</p>
-                    <p style="font-size:13px;color:#718096;margin-top:4px;">Ref: ${data.reference_number}</p>
-                    <span class="release-tag">₱1,500.00 Released via Proxy</span>
+                <div class="result-inner">
+                    <img src="${photoPath}" alt="${data.senior_name}" />
+                    <div class="result-info">
+                        <h3>Proxy Release — ${data.senior_name}</h3>
+                        <p>Age: ${senior.age || ''}</p>
+                        <p>${senior.address || ''}</p>
+                        <p style="font-size:13px;color:#718096;margin-top:4px;">Ref: ${data.reference_number}</p>
+                        <p style="font-size:13px;color:#718096;">Proxy: ${data.proxy_name}</p>
+                        <span class="release-tag">₱1,500.00 Released via Proxy</span>
+                    </div>
                 </div>`;
             startAutoClear(resultBox);
             startBlinkDetection();
@@ -544,11 +707,13 @@ function showFixedSignature(label, mode) {
             <button class="btn btn-outline" onclick="cancelRelease()">Cancel</button>
             <button class="btn btn-confirm" onclick="confirmRelease()">Confirm Release</button>
         `;
+        overlay.classList.remove('proxy-mode');
     } else {
         actions.innerHTML = `
             <button class="btn btn-outline" onclick="closeProxyConfirmation()">Cancel</button>
             <button class="btn btn-confirm" onclick="confirmProxyRelease()">Confirm Release</button>
         `;
+        overlay.classList.add('proxy-mode');
     }
 
     overlay.classList.add('visible');
@@ -567,4 +732,84 @@ function clearFixedSignature() {
 
 function getFixedSignatureData() {
     return document.getElementById('fixedSignatureCanvas').toDataURL('image/png');
+}
+
+// --- Money Detection (one-shot per captured photo) ---
+async function runMoneyDetection(imageData, statusId) {
+    const statusBox = document.getElementById(statusId);
+
+    statusBox.className = 'money-status money-panel panel-warn';
+    statusBox.innerHTML = `
+        <div class="money-header">
+            <span class="money-label">Cash Verification</span>
+            <span class="money-total-badge badge-pending">Detecting…</span>
+        </div>`;
+
+    let data;
+    try {
+        const response = await fetch('/detect-money', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageData })
+        });
+        data = await response.json();
+    } catch (err) {
+        statusBox.className = 'money-status money-panel panel-warn';
+        statusBox.innerHTML = `
+            <div class="money-header">
+                <span class="money-label">Cash Verification</span>
+                <span class="money-total-badge badge-pending">Error</span>
+            </div>
+            <p class="money-hint hint-warn">Detection failed. Please retake the photo.</p>`;
+        return;
+    }
+
+    const total = data.total || 0;
+    const yellow = data.yellow_count || 0;
+    const blue = data.blue_count || 0;
+    const pct = Math.min(100, Math.round((total / 1500) * 100));
+
+    let hint;
+    if (data.detected) {
+        hint = '<p class="money-hint hint-ok">✓ ₱1,500 verified</p>';
+    } else {
+        const remaining = 1500 - total;
+        let msg;
+        if (total > 1500) msg = `Too much — captured ₱${(total - 1500).toLocaleString()} over ₱1,500`;
+        else if (!total) msg = 'No bills detected — please retake with bills clearly visible';
+        else if (yellow > 0 && !blue) msg = `Need a ₱1,000 bill or ${Math.ceil(remaining / 500)} more ₱500 bill${remaining > 500 ? 's' : ''}`;
+        else if (blue > 0 && !yellow) msg = 'Need a ₱500 bill to reach ₱1,500';
+        else msg = `₱${remaining.toLocaleString()} short of ₱1,500`;
+        hint = `<p class="money-hint hint-warn">${msg}</p>`;
+    }
+
+    statusBox.className = 'money-status money-panel ' + (data.detected ? 'panel-ok' : 'panel-warn');
+    statusBox.innerHTML = `
+        <div class="money-header">
+            <span class="money-label">Cash Verification</span>
+            <span class="money-total-badge ${data.detected ? 'badge-ok' : 'badge-pending'}">₱${total.toLocaleString()} / ₱1,500</span>
+        </div>
+        <div class="money-bills">
+            <div class="money-bill ${yellow > 0 ? 'bill-active' : 'bill-empty'}">
+                <span class="bill-denom">₱500</span>
+                <span class="bill-count">${yellow}×</span>
+            </div>
+            <span class="money-plus">+</span>
+            <div class="money-bill ${blue > 0 ? 'bill-active' : 'bill-empty'}">
+                <span class="bill-denom">₱1,000</span>
+                <span class="bill-count">${blue}×</span>
+            </div>
+        </div>
+        <div class="money-bar-track">
+            <div class="money-bar-fill ${data.detected ? 'bar-complete' : ''}" style="width:${pct}%"></div>
+        </div>
+        ${hint}
+    `;
+}
+
+function clearMoneyStatus(statusId) {
+    const box = document.getElementById(statusId);
+    if (!box) return;
+    box.className = 'money-status';
+    box.innerHTML = '';
 }

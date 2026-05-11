@@ -24,26 +24,43 @@
 </div>
 
 <div style="margin-bottom:20px;">
-    <form method="POST" action="/transactions/reset-all" onsubmit="return confirm('Reset ALL claims? This cannot be undone.')">
-        <button type="submit" class="btn btn-danger btn-sm">Reset All Claims</button>
+    <form method="POST" action="/transactions/reset-all" id="resetAllClaimsForm">
+        <button type="button" class="btn btn-danger btn-sm" onclick="openResetAllModal()">Reset All Claims</button>
     </form>
+</div>
+
+<!-- Reset All Claims Confirmation Modal -->
+<div class="reset-modal-overlay" id="resetAllModal">
+    <div class="reset-modal-box">
+        <div class="reset-modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0 -960 960 960" fill="#c53030">
+                <path d="M200-160v-80h64l79-263q8-26 29.5-41.5T420-560h120q26 0 47.5 15.5T617-503l79 263h64v80H200Zm148-80h264l-72-240H420l-72 240Zm92-400v-200h80v200h-80Zm238 99-57-57 142-141 56 56-141 142Zm42 181v-80h200v80H720ZM282-541 141-683l56-56 142 141-57 57ZM40-360v-80h200v80H40Zm440 120Z"/>
+            </svg>
+        </div>
+        <h3>Reset All Claims</h3>
+        <p>This will reset ALL claim statuses for this disbursement period. This cannot be undone.</p>
+        <div class="reset-modal-actions">
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeResetAllModal()">Cancel</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('resetAllClaimsForm').submit()">Reset All Claims</button>
+        </div>
+    </div>
 </div>
 
 {% if seniors %}
 <div class="seniors-grid">
     {% for senior in seniors %}
     <div class="senior-card">
-        <img src="/{{ senior.photo_path }}" alt="{{ senior.full_name }}" />
+        <img src="/{{ senior.photo_path }}" alt="{{ senior.display_name }}" />
         <div class="senior-card-info">
-            <h3>{{ senior.full_name }}</h3>
+            <h3>{{ senior.display_name }}</h3>
             <p>Age: {{ senior.age }}</p>
-            <p>{{ senior.address }}</p>
+            <p>{{ senior.display_address }}</p>
             <div class="card-actions">
                 <a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
-                <form method="POST" action="/seniors/{{ senior.id }}/reset-claim" onsubmit="return confirm('Reset claim for {{ senior.full_name }}?')">
+                <form method="POST" action="/seniors/{{ senior.id }}/reset-claim" onsubmit="return confirm('Reset claim for {{ senior.display_name }}?')">
                     <button type="submit" class="btn btn-warning btn-sm">Reset Claim</button>
                 </form>
-                <form method="POST" action="/seniors/{{ senior.id }}/delete" onsubmit="return confirm('Remove {{ senior.full_name }} from the system?')">
+                <form method="POST" action="/seniors/{{ senior.id }}/delete" onsubmit="return confirm('Remove {{ senior.display_name }} from the system?')">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                 </form>
             </div>
@@ -52,4 +69,18 @@
     {% endfor %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openResetAllModal() {
+    document.getElementById('resetAllModal').classList.add('visible');
+}
+function closeResetAllModal() {
+    document.getElementById('resetAllModal').classList.remove('visible');
+}
+document.getElementById('resetAllModal').addEventListener('click', function(e) {
+    if (e.target === this) closeResetAllModal();
+});
+</script>
 {% endblock %}

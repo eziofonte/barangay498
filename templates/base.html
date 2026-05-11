@@ -14,13 +14,16 @@
         <div class="topbar-left">
             <img src="/static/img/icons/barangay-logo.svg" class="topbar-logo" alt="Logo">
             <div class="topbar-title">
-                <h1>System Prof Elect</h1>
+                <h1>Barangay 498</h1>
                 <p>Barangay Senior Citizens Management</p>
             </div>
         </div>
         {% if current_user.is_authenticated %}
         <div class="topbar-right">
-            <span>{{ current_user.name }}</span>
+            <div class="topbar-clock" aria-label="Current time">
+                <span class="clock-time" id="clockTime">--:-- --</span>
+                <span class="clock-date" id="clockDate">—</span>
+            </div>
         </div>
         {% endif %}
     </div>
@@ -51,8 +54,21 @@
             <img src="/static/img/icons/transaction-history.svg" class="nav-icon" alt="History" />
             <span>History</span>
         </a>
+        {% if current_user.role in ('captain', 'admin') %}
+        <a href="/proxy-management" class="nav-item {% if request.path == '/proxy-management' %}active{% endif %}">
+            <div class="nav-icon-placeholder"></div>
+            <span>Proxy Management</span>
+        </a>
+        {% endif %}
     </nav>
     <div class="sidebar-bottom">
+        <div class="user-profile-card">
+            <div class="user-avatar">{{ current_user.name[:1]|upper }}</div>
+            <div class="user-profile-info">
+                <p class="user-profile-name" title="{{ current_user.name }}">{{ current_user.name }}</p>
+                <span class="user-role-pill role-{{ current_user.role }}">{{ current_user.role|title }}</span>
+            </div>
+        </div>
         <a href="/logout" class="nav-item logout">
             <img src="/static/img/icons/logout-icon.svg" class="nav-icon" alt="Logout" />
             <span>Logout</span>
@@ -88,6 +104,23 @@
 
     // Start the timer immediately
     resetTimer();
+
+    // --- Live header clock ---
+    function updateHeaderClock() {
+        const now = new Date();
+        let h = now.getHours();
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        const tEl = document.getElementById('clockTime');
+        const dEl = document.getElementById('clockDate');
+        if (tEl) tEl.textContent = `${h}:${m} ${ampm}`;
+        if (dEl) dEl.textContent = now.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric'
+        });
+    }
+    updateHeaderClock();
+    setInterval(updateHeaderClock, 30000);
 </script>
 {% endif %}
 

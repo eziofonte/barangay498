@@ -12,9 +12,15 @@
     {% endif %}
 {% endwith %}
 
-<div class="page-header">
-    <h2>Transaction History</h2>
-    <p>All money release records</p>
+<div class="page-header page-header-row">
+    <div>
+        <h2>Transaction History</h2>
+        <p>All money release records</p>
+    </div>
+    <button type="button" class="btn-export" onclick="openExportModal()">
+        <span class="btn-export-icon">⬇</span>
+        Download Report
+    </button>
 </div>
 
 <!-- Filters -->
@@ -56,7 +62,7 @@
                 <td>{{ loop.index }}</td>
                 <td><span class="badge badge-blue">{{ t.reference_number }}</span></td>
                 <td>
-                    <strong>{{ t.senior.full_name }}</strong>
+                    <strong>{{ t.senior.display_name }}</strong>
                     {% if t.release_type == 'Proxy' %}
                         <br><span class="badge badge-red" style="font-size:11px;">Proxy: {{ t.proxy_name }} ({{ t.proxy_relationship }})</span>
                     {% endif %}
@@ -79,7 +85,7 @@
                 <td>
                     <button class="btn btn-outline btn-sm"
                         onclick="viewProof(
-                            '{{ t.senior.full_name }}',
+                            '{{ t.senior.display_name }}',
                             '{{ t.reference_number }}',
                             '{{ t.date_released.strftime('%b %d, %Y %I:%M %p') }}',
                             '{{ ('/' + t.release_photo_path) if t.release_photo_path else '' }}',
@@ -97,6 +103,35 @@
     {% else %}
     <div class="empty-state">No transactions found.</div>
     {% endif %}
+</div>
+
+<!-- Export Analytics Modal -->
+<div class="modal-overlay" id="exportModal">
+    <div class="modal-box modal-export">
+        <div class="modal-header">
+            <h3>Download Analytics Report</h3>
+            <button class="modal-close" onclick="closeExportModal()">✕</button>
+        </div>
+        <p class="export-help">
+            Choose a date range. The report contains two sheets — <strong>Claimed</strong> (seniors who received their payout) and <strong>Unclaimed</strong> (seniors who did not).
+        </p>
+        <form method="POST" action="/export-analytics" class="export-form">
+            <div class="export-fields">
+                <div class="filter-group">
+                    <label for="export-from">From Date</label>
+                    <input type="date" id="export-from" name="date_from" required />
+                </div>
+                <div class="filter-group">
+                    <label for="export-to">To Date</label>
+                    <input type="date" id="export-to" name="date_to" required />
+                </div>
+            </div>
+            <div class="export-actions">
+                <button type="button" class="btn btn-outline" onclick="closeExportModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Generate &amp; Download</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Proof Modal -->
@@ -169,6 +204,34 @@ function closeModal() {
 // Close on outside click
 document.getElementById('proofModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
+});
+
+// --- Export Analytics Modal ---
+function openExportModal() {
+    const fromInput = document.getElementById('export-from');
+    const toInput = document.getElementById('export-to');
+    if (!fromInput.value || !toInput.value) {
+        const today = new Date();
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        const fmt = d => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+        if (!fromInput.value) fromInput.value = fmt(ninetyDaysAgo);
+        if (!toInput.value) toInput.value = fmt(today);
+    }
+    document.getElementById('exportModal').classList.add('visible');
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').classList.remove('visible');
+}
+
+document.getElementById('exportModal').addEventListener('click', function(e) {
+    if (e.target === this) closeExportModal();
 });
 </script>
 {% endblock %}

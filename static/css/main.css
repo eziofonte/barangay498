@@ -78,9 +78,37 @@ body {
 .topbar-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     font-size: 14px;
     color: #bfdbfe;
+}
+
+/* --- Header clock --- */
+.topbar-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.15;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+}
+
+.clock-time {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.clock-date {
+    font-size: 11px;
+    color: #bfdbfe;
+    margin-top: 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
 }
 
 .avatar-placeholder {
@@ -142,10 +170,17 @@ body {
     color: #1a56a0;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+    .nav-item:not(.active):not(.logout):hover {
+        transform: translateX(3px);
+    }
+}
+
 .nav-item.active {
     background: #1a56a0;
     color: white;
     font-weight: 700;
+    box-shadow: 0 2px 8px rgba(26, 86, 160, 0.25);
 }
 
 .nav-item.active .nav-icon {
@@ -172,6 +207,75 @@ body {
 .sidebar-bottom {
     padding: 12px;
     border-top: 1px solid #f0f4f8;
+}
+
+/* --- User profile card (above logout) --- */
+.user-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #ebf4ff 0%, #f0f7ff 100%);
+    border: 1px solid #bee3f8;
+    border-radius: 10px;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a56a0, #3b82f6);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(26, 86, 160, 0.25);
+}
+
+.user-profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-profile-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-role-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.user-role-pill.role-captain {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.user-role-pill.role-admin {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.user-role-pill.role-official {
+    background: #d1fae5;
+    color: #065f46;
 }
 
 .nav-item.logout {
@@ -202,6 +306,17 @@ body {
     flex: 1;
     padding: 28px 32px;
     overflow-y: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes page-enter {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .main-content {
+        animation: page-enter 0.25s ease-out;
+    }
 }
 
 /* --- Page Header --- */

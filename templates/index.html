@@ -62,7 +62,10 @@
         {% set percent = ((claimed_count / senior_count * 100) | int) if senior_count > 0 else 0 %}
         <div class="progress-bar-fill" style="width: 0%" data-target="{{ percent }}"></div>
     </div>
-    <div class="progress-label">{{ percent }}% claim rate</div>
+    <div class="progress-label">
+        <span>{{ percent }}% claim rate</span>
+        <span class="progress-check" id="progressCheck" aria-hidden="true">✓</span>
+    </div>
 </div>
 
 <!-- Quick Actions -->
@@ -143,42 +146,88 @@
 {% endif %}
 
 <script>
-// Greeting
-const hour = new Date().getHours();
-const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-document.getElementById('greeting').textContent = `${greeting}! Here is today's overview — {{ now.strftime('%B %d, %Y') }}`;
+(function () {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Count-up animation
-function countUp(el, target, duration = 1000) {
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-        start += step;
-        if (start >= target) {
-            el.textContent = target;
-            clearInterval(timer);
-        } else {
-            el.textContent = Math.floor(start);
-        }
-    }, 16);
-}
-
-document.querySelectorAll('.stat-info h3').forEach(el => {
-    const text = el.textContent.trim();
-    if (/^\d+$/.test(text)) {
-        const target = parseInt(text);
-        el.textContent = '0';
-        countUp(el, target);
+    // --- Time-aware greeting ---
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const greetingEl = document.getElementById('greeting');
+    if (greetingEl) {
+        greetingEl.textContent = `${greeting}! Here is today's overview — {{ now.strftime('%B %d, %Y') }}`;
     }
-});
 
-// Animate progress bar
-const bar = document.querySelector('.progress-bar-fill');
-if (bar) {
-    setTimeout(() => {
-        bar.style.width = bar.dataset.target + '%';
-    }, 100);
-}
+    // --- Eased count-up (supports currency / decimals) ---
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
+    function animateCount(el, original) {
+        const match = original.match(/^(\D*)([\d,]+(?:\.\d+)?)(\D*)$/);
+        if (!match) return;
+        const prefix = match[1];
+        const suffix = match[3];
+        const target = parseFloat(match[2].replace(/,/g, ''));
+        if (Number.isNaN(target)) return;
+
+        const hasDecimals = match[2].includes('.');
+        const decimals = hasDecimals ? (match[2].split('.')[1].length) : 0;
+
+        if (reduceMotion) {
+            el.textContent = original;
+            return;
+        }
+
+        const duration = 900;
+        const start = performance.now();
+        function frame(now) {
+            const t = Math.min(1, (now - start) / duration);
+            const value = target * easeOutCubic(t);
+            const formatted = value.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+            el.textContent = prefix + formatted + suffix;
+            if (t < 1) requestAnimationFrame(frame);
+            else el.textContent = original;
+        }
+        requestAnimationFrame(frame);
+    }
+
+    document.querySelectorAll('.stat-info h3').forEach(el => {
+        const original = el.textContent.trim();
+        if (reduceMotion) return;
+        el.textContent = original.replace(/[\d.]+/, '0');
+        // Stat cards have an entrance delay — sync count-up to land near the end.
+        setTimeout(() => animateCount(el, original), 300);
+    });
+
+    // --- Progress bar fill + completion check ---
+    const bar = document.querySelector('.progress-bar-fill');
+    const check = document.getElementById('progressCheck');
+    if (bar) {
+        const target = parseInt(bar.dataset.target, 10) || 0;
+        setTimeout(() => {
+            bar.style.width = target + '%';
+            if (target >= 100) {
+                bar.classList.add('complete');
+                if (check) {
+                    setTimeout(() => check.classList.add('visible'), 900);
+                }
+            }
+        }, reduceMotion ? 0 : 450);
+    }
+
+    // --- Insight sentiment tagging ---
+    const positiveRe = /(great|good job|excellent|all .* claimed|100%|done|on track|congratulation)/i;
+    const negativeRe = /(urgent|critical|alert|missing|failed|error|action required|overdue)/i;
+    const warningRe  = /(warning|caution|low|review|consider|attention|reminder|nearing)/i;
+
+    document.querySelectorAll('.insight-item').forEach(item => {
+        const text = item.textContent || '';
+        if (positiveRe.test(text))      item.classList.add('insight-positive');
+        else if (negativeRe.test(text)) item.classList.add('insight-negative');
+        else if (warningRe.test(text))  item.classList.add('insight-warning');
+    });
+})();
 </script>
 
 {% endblock %}

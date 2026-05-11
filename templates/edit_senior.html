@@ -3,56 +3,103 @@
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/register.css">
+<link rel="stylesheet" href="/static/css/edit_senior.css">
 {% endblock %}
 
 {% block content %}
 <a href="/seniors" class="back-link">← Back to Seniors</a>
 <div class="page-header">
     <h2>Edit Senior Record</h2>
-    <p>Update {{ senior.full_name }}'s information</p>
+    <p>Update {{ senior.display_name }}'s information</p>
 </div>
 
-<div class="form-wrapper">
-    <div class="card">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-success">{{ messages[0] }}</div>
-            {% endif %}
-        {% endwith %}
+<div class="card">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-success">{{ messages[0] }}</div>
+        {% endif %}
+    {% endwith %}
 
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" name="full_name" value="{{ senior.full_name }}" required />
-            </div>
-            <div class="form-group">
-                <label>Age</label>
-                <input type="number" name="age" value="{{ senior.age }}" required />
-            </div>
-            <div class="form-group">
-                <label>Address</label>
-                <input type="text" name="address" value="{{ senior.address }}" required />
-            </div>
-            <div class="form-group">
-                <label>Current Photo</label>
-                <img src="/{{ senior.photo_path }}" alt="{{ senior.full_name }}"
-                     style="width:100%;height:200px;object-fit:cover;border-radius:8px;margin-bottom:10px;" />
-                <label>Replace Photo (optional)</label>
-                <div class="preview" id="preview">
-                    <div class="preview-placeholder" id="preview-placeholder">
-                        <div style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;"></div>
-                        <p>Upload a new photo to replace</p>
-                    </div>
-                    <img class="preview-img" id="preview-img" src="" alt="preview" />
-                </div>
-                <input type="file" name="photo" id="photo" accept="image/*" />
-            </div>
-            <div style="display:flex;gap:12px;">
-                <button type="submit" class="btn btn-primary" style="flex:1;">Save Changes</button>
-                <a href="/seniors" class="btn btn-outline" style="flex:1;text-align:center;">Cancel</a>
-            </div>
-        </form>
+    <!-- Current Senior Hero -->
+    <div class="edit-hero">
+        <img src="/{{ senior.photo_path }}" alt="{{ senior.display_name }}" class="edit-hero-photo" />
+        <div class="edit-hero-info">
+            <h3>{{ senior.display_name }}</h3>
+            <p>Age {{ senior.age }} · {{ senior.display_address }}</p>
+            <span class="edit-hero-tag">Currently on file</span>
+        </div>
     </div>
+
+    <form method="POST" enctype="multipart/form-data" id="editForm">
+        <div class="register-layout">
+
+            <!-- Left: Form fields -->
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" value="{{ senior.display_name }}" required />
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <div class="age-input-wrapper">
+                        <button type="button" class="age-btn" onclick="changeAge(-1)">−</button>
+                        <input type="number" name="age" id="ageInput" value="{{ senior.age }}" min="60" required />
+                        <button type="button" class="age-btn" onclick="changeAge(1)">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" name="address" value="{{ senior.display_address }}" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Replace Photo <span class="optional-hint">(optional)</span></label>
+                    <div class="photo-toggle">
+                        <button type="button" class="toggle-btn active" id="btnUpload" onclick="switchMode('upload')">Upload Photo</button>
+                        <button type="button" class="toggle-btn" id="btnCamera" onclick="switchMode('camera')">Use Camera</button>
+                    </div>
+                </div>
+
+                <!-- Upload Mode -->
+                <div id="uploadMode">
+                    <div class="preview" id="preview">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <div style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;"></div>
+                            <p>New photo preview will appear here</p>
+                        </div>
+                        <img class="preview-img" id="preview-img" src="" alt="preview" />
+                    </div>
+                    <input type="file" name="photo" id="photo" accept="image/*" data-optional="true" style="display:none;" />
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('photo').click()">
+                        <div class="upload-icon">📁</div>
+                        <p class="upload-text">Click to choose a new photo</p>
+                        <p class="upload-subtext">JPG, JPEG, PNG supported · Leave blank to keep current</p>
+                    </div>
+                </div>
+
+                <input type="hidden" name="captured_photo" id="captured_photo" />
+
+                <div class="edit-actions">
+                    <a href="/seniors" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+
+            <!-- Right: Camera (shown when camera mode is active) -->
+            <div class="camera-section" id="cameraSection">
+                <div class="camera-preview">
+                    <video id="regVideo" autoplay playsinline></video>
+                    <canvas id="regCanvas"></canvas>
+                    <img id="capturedPhoto" src="" alt="Captured" style="display:none;" />
+                </div>
+                <div class="camera-controls">
+                    <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">Capture Photo</button>
+                    <button type="button" class="btn btn-outline" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
 </div>
 {% endblock %}
 
