@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Proxy Management — System Prof Elect{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="/static/css/proxy_management.css">
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash-{{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="top-bar">
+    <div class="page-header" style="margin-bottom:0;">
+        <h2>Proxy Management</h2>
+        <p>{{ enrollments|length }} enrolled proxy{{ 'ies' if enrollments|length != 1 else '' }}</p>
+    </div>
+    <button class="btn btn-primary" onclick="openEnrollModal()">+ Enroll Proxy</button>
+</div>
+
+{% set has_any = namespace(value=false) %}
+{% for senior in seniors %}{% if senior.proxy_enrollments %}{% set has_any.value = true %}{% endif %}{% endfor %}
+
+{% if not has_any.value %}
+<div class="empty-state">
+    <p style="font-size:18px; font-weight:600; color:#4a5568; margin-bottom:8px;">No proxies enrolled yet</p>
+    <p style="font-size:14px;">Enroll a proxy to allow authorized representatives to claim on a senior's behalf.</p>
+</div>
+{% else %}
+    {% for senior in seniors %}
+    {% if senior.proxy_enrollments %}
+    <div class="proxy-group">
+        <div class="proxy-group-header">
+            <img src="/{{ senior.photo_path }}" class="senior-avatar-sm" alt="{{ senior.display_name }}" />
+            <div>
+                <h3>{{ senior.display_name }}</h3>
+                <p>Age {{ senior.age }} &middot; {{ senior.proxy_enrollments|length }} proxy{{ 'ies' if senior.proxy_enrollments|length != 1 else '' }}</p>
+            </div>
+        </div>
+        <div class="proxy-grid">
+            {% for proxy in senior.proxy_enrollments %}
+            <div class="proxy-card {{ '' if proxy.is_active else 'inactive' }}">
+                <div class="proxy-card-top">
+                    {% if proxy.face_photo %}
+                        <img src="/{{ proxy.face_photo.replace('\\', '/') }}" class="proxy-face-img" alt="{{ proxy.display_name }}" />
+                    {% else %}
+                        <div class="proxy-face-placeholder">No Photo</div>
+                    {% endif %}
+                    <div class="proxy-card-info">
+                        <h4>{{ proxy.display_name }}</h4>
+                        <p>{{ proxy.relationship }}</p>
+                        <p>{{ proxy.id_type }}: {{ proxy.display_id_number }}</p>
+                        {% if proxy.id_photo %}
+                        <a href="/{{ proxy.id_photo.replace('\\', '/') }}" target="_blank" class="id-photo-link">View ID</a>
+                        {% endif %}
+                    </div>
+                    <span class="badge {{ 'badge-green' if proxy.is_active else 'badge-red' }}">
+                        {{ 'Active' if proxy.is_active else 'Inactive' }}
+                    </span>
+                </div>
+                <div class="proxy-card-meta">
+                    Enrolled {{ proxy.enrolled_at.strftime('%b %d, %Y') }} by {{ proxy.official.name }}
+                </div>
+                <div class="proxy-card-actions">
+                    <form method="POST" action="/proxy-enrollment/{{ proxy.id }}/toggle">
+                        <button type="submit" class="btn btn-sm {{ 'btn-outline' if proxy.is_active else 'btn-primary' }}">
+                            {{ 'Deactivate' if proxy.is_active else 'Reactivate' }}
+                        </button>
+                    </form>
+                    <form method="POST" action="/proxy-enrollment/{{ proxy.id }}/delete"
+                          onsubmit="return confirm('Remove {{ proxy.display_name }} from the system?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+{% endif %}
+
+<!-- Enroll Modal -->
+<div class="enroll-overlay" id="enrollOverlay">
+    <div class="enroll-box">
+        <h3>Enroll New Proxy</h3>
+
+        <form method="POST" action="/enroll-proxy" enctype="multipart/form-data" id="enrollForm">
+
+            <div class="form-group">
+                <label>Senior Citizen</label>
+                <select name="senior_id" required>
+                    <option value="">-- Select Senior --</option>
+                    {% for senior in seniors %}
+                    <option value="{{ senior.id }}">{{ senior.display_name }} (Age {{ senior.age }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Proxy Full Name</label>
+                    <input type="text" name="full_name" placeholder="e.g. Maria Dela Cruz" required />
+                </div>
+                <div class="form-group">
+                    <label>Relationship to Senior</label>
+                    <input type="text" name="relationship" placeholder="e.g. Daughter" required />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ID Type</label>
+                    <select name="id_type" required>
+                        <option value="">-- Select --</option>
+                        <option>PhilSys (National ID)</option>
+                        <option>Driver's License</option>
+                        <option>Passport</option>
+                        <option>Voter's ID</option>
+                        <option>UMID</option>
+                        <option>SSS ID</option>
+                        <option>Postal ID</option>
+                        <option>Barangay ID</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID Number</label>
+                    <input type="text" name="id_number" placeholder="ID number" required />
+                </div>
+            </div>
+
+            <div class="upload-row">
+                <div class="form-group">
+                    <label>ID Photo <span class="required-star">*</span></label>
+                    <div class="upload-box" onclick="document.getElementById('idPhotoInput').click()">
+                        <img id="idPhotoPreview" class="upload-preview" alt="" />
+                        <p id="idPhotoLabel">Click to upload</p>
+                    </div>
+                    <input type="file" id="idPhotoInput" name="id_photo" accept="image/*" style="display:none;"
+                           onchange="previewUpload(this, 'idPhotoPreview', 'idPhotoLabel')" required />
+                </div>
+                <div class="form-group">
+                    <label>Face Photo <span class="optional-label">(optional)</span></label>
+                    <div class="upload-box" onclick="document.getElementById('facePhotoInput').click()">
+                        <img id="facePhotoPreview" class="upload-preview" alt="" />
+                        <p id="facePhotoLabel">Click to upload</p>
+                    </div>
+                    <input type="file" id="facePhotoInput" name="face_photo" accept="image/*" style="display:none;"
+                           onchange="previewUpload(this, 'facePhotoPreview', 'facePhotoLabel')" />
+                </div>
+            </div>
+
+            <div class="enroll-actions">
+                <button type="button" class="btn btn-outline" onclick="closeEnrollModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Enroll Proxy</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEnrollModal() {
+    document.getElementById('enrollOverlay').classList.add('visible');
+}
+function closeEnrollModal() {
+    document.getElementById('enrollOverlay').classList.remove('visible');
+}
+function previewUpload(input, previewId, labelId) {
+    const file = input.files[0];
+    if (!file) return;
+    const preview = document.getElementById(previewId);
+    const label   = document.getElementById(labelId);
+    const reader  = new FileReader();
+    reader.onload = e => {
+        preview.src   = e.target.result;
+        preview.style.display = 'block';
+        label.style.display   = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+// Close modal when clicking backdrop
+document.getElementById('enrollOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeEnrollModal();
+});
+</script>
+{% endblock %}

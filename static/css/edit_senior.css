@@ -1,0 +1,75 @@
+/* ============================================================
+   edit_senior.css — Edit Senior Page Styles
+   ============================================================ */
+
+.edit-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px;
+    background: #f0f7ff;
+    border: 1px solid #bee3f8;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.edit-hero-photo {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(26, 86, 160, 0.15);
+    flex-shrink: 0;
+}
+
+.edit-hero-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.edit-hero-info h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 2px;
+}
+
+.edit-hero-info p {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+.edit-hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1a56a0;
+    background: #ffffff;
+    border: 1px solid #bee3f8;
+    border-radius: 999px;
+    padding: 3px 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.optional-hint {
+    color: #a0aec0;
+    font-weight: 400;
+    font-size: 13px;
+    margin-left: 4px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.edit-actions .btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    font-size: 15px;
+}
