@@ -57,8 +57,8 @@
             <p>{{ senior.display_address }}</p>
             <div class="card-actions">
                 <a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
-                <form method="POST" action="/seniors/{{ senior.id }}/reset-claim" onsubmit="return confirm('Reset claim for {{ senior.display_name }}?')">
-                    <button type="submit" class="btn btn-warning btn-sm">Reset Claim</button>
+                <form method="POST" action="/seniors/{{ senior.id }}/reset-claim" id="resetClaimForm-{{ senior.id }}">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="openSingleResetModal({{ senior.id }})">Reset Claim</button>
                 </form>
                 <form method="POST" action="/seniors/{{ senior.id }}/delete" onsubmit="return confirm('Remove {{ senior.display_name }} from the system?')">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>

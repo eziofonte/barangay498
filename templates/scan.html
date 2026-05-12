@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Scan — System Prof Elect{% endblock %}
+{% block title %}Scan — Barangay 498{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/scan.css">
@@ -44,7 +44,6 @@
             <img id="releaseCaptured" alt="Release Photo" />
             <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:16px;">Take Photo</button>
             <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:16px;">Retake</button>
-            <div class="money-status" id="moneyStatus"></div>
         </div>
         <div id="regularReleaseError" style="display:none;color:#c53030;font-size:14px;margin-top:8px;text-align:left;">
             Please take a live photo first.
@@ -121,35 +120,17 @@
         <p style="color:#718096;font-size:13px;margin-bottom:8px;">
             Proxy: <strong id="proxyConfirmProxyName"></strong>
         </p>
-
-        <!-- Side-by-side photo row -->
-        <div class="proxy-photo-row">
-            <!-- Left: enrolled face photo (hidden when walk-in) -->
-            <div id="proxyFaceComparison" class="proxy-photo-col" style="display:none;">
-                <p class="section-label">Enrolled Photo</p>
-                <img id="enrolledFacePhoto" src="" alt="Enrolled" class="proxy-photo-img" />
-            </div>
-
-            <!-- Right: live camera feed -->
-            <div class="proxy-photo-col">
-                <p class="section-label">Live Photo</p>
-                <canvas id="proxyVideoCanvas"></canvas>
-                <img id="proxyConfirmPhoto" alt="Live Photo" />
-                <input type="hidden" id="proxyPhotoData" />
-            </div>
-        </div>
-
-        <!-- Cash verification — full width -->
         <div class="release-photo-section">
-            <div class="money-status" id="proxyMoneyStatus"></div>
-            <button class="btn btn-outline btn-sm" id="proxyTakePhotoBtn" onclick="takeProxyPhoto()">Take Photo</button>
-            <button class="btn btn-outline btn-sm" id="proxyRetakePhotoBtn" onclick="retakeProxyPhoto()" style="display:none;">Retake</button>
+            <p class="section-label">Live Photo</p>
+            <canvas id="proxyVideoCanvas"></canvas>
+            <img id="proxyConfirmPhoto" alt="Live Photo" />
+            <input type="hidden" id="proxyPhotoData" />
+            <button type="button" class="btn btn-outline btn-sm" id="proxyTakePhotoBtn" onclick="takeProxyPhoto()" style="margin-top:16px;">Take Photo</button>
+            <button type="button" class="btn btn-outline btn-sm" id="proxyRetakePhotoBtn" onclick="retakeProxyPhoto()" style="display:none;margin-top:16px;">Retake</button>
         </div>
-
         <div id="proxyReleaseError" style="display:none;color:#c53030;font-size:14px;margin-top:8px;text-align:left;">
             Please take a live photo first.
         </div>
-
         <div id="proxyConfirmError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>
         <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>

@@ -23,7 +23,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     box-shadow: 0 2px 8px rgba(47, 133, 90, 0.25);
 }
 
@@ -100,7 +100,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 14px;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .filter-group input:focus {
@@ -130,7 +130,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     white-space: nowrap;
 }
 
@@ -149,7 +149,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     margin-bottom: 16px;
 }
 

@@ -120,3 +120,20 @@
         animation: insight-slide-in 0.4s ease-out 0.6s both;
     }
 }
+/* --- Two-column layout for Follow-up Priority + Unclaimed Seniors --- */
+.dss-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.dss-two-col .dss-section {
+    margin-top: 0;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .dss-two-col {
+        grid-template-columns: 1fr;
+    }
+}

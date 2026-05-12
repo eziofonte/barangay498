@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Proxy Management — System Prof Elect{% endblock %}
+{% block title %}Proxy Management — Barangay 498{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/proxy_management.css">
@@ -20,7 +20,7 @@
         <h2>Proxy Management</h2>
         <p>{{ enrollments|length }} enrolled proxy{{ 'ies' if enrollments|length != 1 else '' }}</p>
     </div>
-    <button class="btn btn-primary" onclick="openEnrollModal()">+ Enroll Proxy</button>
+    <button class="btn btn-primary" onclick="openEnrollModal()">Enroll Proxy</button>
 </div>
 
 {% set has_any = namespace(value=false) %}
@@ -72,9 +72,8 @@
                             {{ 'Deactivate' if proxy.is_active else 'Reactivate' }}
                         </button>
                     </form>
-                    <form method="POST" action="/proxy-enrollment/{{ proxy.id }}/delete"
-                          onsubmit="return confirm('Remove {{ proxy.display_name }} from the system?')">
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    <form method="POST" action="/proxy-enrollment/{{ proxy.id }}/delete" id="deleteProxyForm-{{ proxy.id }}">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteProxyModal({{ proxy.id }})">Delete</button>
                     </form>
                 </div>
             </div>
@@ -84,6 +83,23 @@
     {% endif %}
     {% endfor %}
 {% endif %}
+
+<!-- Delete Proxy Confirmation Modal -->
+<div class="reset-modal-overlay" id="deleteProxyModal">
+    <div class="reset-modal-box">
+        <div class="reset-modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0 -960 960 960" fill="#c53030">
+                <path d="M200-160v-80h64l79-263q8-26 29.5-41.5T420-560h120q26 0 47.5 15.5T617-503l79 263h64v80H200Zm148-80h264l-72-240H420l-72 240Zm92-400v-200h80v200h-80Zm238 99-57-57 142-141 56 56-141 142Zm42 181v-80h200v80H720ZM282-541 141-683l56-56 142 141-57 57ZM40-360v-80h200v80H40Zm440 120Z"/>
+            </svg>
+        </div>
+        <h3>Delete Proxy Enrollment</h3>
+        <p>This will permanently remove this proxy enrollment from the system. This cannot be undone.</p>
+        <div class="reset-modal-actions">
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeDeleteProxyModal()">Cancel</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteProxy()">Confirm</button>
+        </div>
+    </div>
+</div>
 
 <!-- Enroll Modal -->
 <div class="enroll-overlay" id="enrollOverlay">
@@ -190,6 +206,24 @@ function previewUpload(input, previewId, labelId) {
 // Close modal when clicking backdrop
 document.getElementById('enrollOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeEnrollModal();
+});
+
+let pendingDeleteProxyId = null;
+function openDeleteProxyModal(proxyId) {
+    pendingDeleteProxyId = proxyId;
+    document.getElementById('deleteProxyModal').classList.add('visible');
+}
+function closeDeleteProxyModal() {
+    pendingDeleteProxyId = null;
+    document.getElementById('deleteProxyModal').classList.remove('visible');
+}
+function confirmDeleteProxy() {
+    if (pendingDeleteProxyId == null) return;
+    const form = document.getElementById('deleteProxyForm-' + pendingDeleteProxyId);
+    if (form) form.submit();
+}
+document.getElementById('deleteProxyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteProxyModal();
 });
 </script>
 {% endblock %}

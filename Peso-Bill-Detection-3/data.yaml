@@ -1,0 +1,13 @@
+names:
+- 1000peso
+- 500peso
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: peso-bill-detection-5kfcf
+  url: https://universe.roboflow.com/dwayne-y7phs/peso-bill-detection-5kfcf/dataset/4
+  version: 4
+  workspace: dwayne-y7phs
+test: C:/Users/dwayn/Documents/VS/System Prof Elect/Peso-Bill-Detection-4/test/images
+train: C:/Users/dwayn/Documents/VS/System Prof Elect/Peso-Bill-Detection-4/train/images
+val: C:/Users/dwayn/Documents/VS/System Prof Elect/Peso-Bill-Detection-4/valid/images

@@ -16,6 +16,14 @@ class Official(db.Model, UserMixin):
     failed_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
+def _safe_decrypt(value):
+    if value is None:
+        return ''
+    try:
+        return decrypt(value)
+    except Exception:
+        return value
+
 # --- Senior Citizen ---
 class Senior(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,14 +32,14 @@ class Senior(db.Model):
     address = db.Column(db.String(300), nullable=False)
     photo_path = db.Column(db.String(300), nullable=False)
     face_encoding = db.Column(db.Text, nullable=True)
-    
+
     @property
     def display_name(self):
-        return decrypt(self.full_name)
+        return _safe_decrypt(self.full_name)
 
     @property
     def display_address(self):
-        return decrypt(self.address)
+        return _safe_decrypt(self.address)
 
 # --- Proxy Pre-Enrollment ---
 class ProxyEnrollment(db.Model):
@@ -52,11 +60,11 @@ class ProxyEnrollment(db.Model):
 
     @property
     def display_name(self):
-        return decrypt(self.full_name)
+        return _safe_decrypt(self.full_name)
 
     @property
     def display_id_number(self):
-        return decrypt(self.id_number)
+        return _safe_decrypt(self.id_number)
 
 # --- Transaction (record of money received) ---
 class Transaction(db.Model):

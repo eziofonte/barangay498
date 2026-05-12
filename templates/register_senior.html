@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Register Senior — System Prof Elect{% endblock %}
+{% block title %}Register Senior — Barangay 498{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/register.css">
@@ -53,38 +53,34 @@
                     </div>
                 </div>
 
-                <!-- Upload Mode -->
-                <div id="uploadMode">
-                    <div class="preview" id="preview">
-                        <div class="preview-placeholder" id="preview-placeholder">
-                            <div style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;"></div>
-                            <p>Photo preview will appear here</p>
-                        </div>
-                        <img class="preview-img" id="preview-img" src="" alt="preview" />
-                    </div>
-                    <input type="file" name="photo" id="photo" accept="image/*" style="display:none;" />
-                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('photo').click()">
-                        <div class="upload-icon">📁</div>
-                        <p class="upload-text">Click to choose a photo</p>
-                        <p class="upload-subtext">JPG, JPEG, PNG supported</p>
-                    </div>
-                </div>
-
                 <input type="hidden" name="captured_photo" id="captured_photo" />
                 <button type="submit" class="btn btn-primary btn-submit" style="margin-top:24px;">Register Senior</button>
             </div>
 
-            <!-- Right: Camera (shown when camera mode is active) -->
-            <div class="camera-section" id="cameraSection">
-                <div class="camera-preview">
-                    <video id="regVideo" autoplay playsinline></video>
-                    <canvas id="regCanvas"></canvas>
-                    <img id="capturedPhoto" src="" alt="Captured" style="display:none;" />
+            <!-- Right: Shared photo widget (camera or upload preview) -->
+            <div class="camera-section visible" id="cameraSection">
+                <div class="photo-box">
+                    <!-- Camera mode -->
+                    <div id="cameraMode" class="photo-mode" style="display:none;">
+                        <video id="regVideo" autoplay playsinline></video>
+                        <canvas id="regCanvas"></canvas>
+                        <img id="capturedPhoto" src="" alt="Captured" />
+                    </div>
+                    <!-- Upload mode -->
+                    <div id="uploadMode" class="photo-mode">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <img class="preview-icon" src="/static/img/icons/image_icon.svg" alt="" />
+                            <p>Photo preview will appear here</p>
+                        </div>
+                        <img class="preview-img" id="preview-img" src="" alt="preview" />
+                    </div>
                 </div>
-                <div class="camera-controls">
-                    <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">Capture Photo</button>
+                <div class="photo-controls">
+                    <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()" style="display:none;">Capture Photo</button>
                     <button type="button" class="btn btn-outline" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
+                    <button type="button" class="btn btn-primary" id="chooseBtn" onclick="document.getElementById('photo').click()">Choose Photo</button>
                 </div>
+                <input type="file" name="photo" id="photo" accept="image/*" style="display:none;" />
             </div>
 
         </div>
@@ -94,4 +90,38 @@
 
 {% block scripts %}
 <script src="/static/js/register.js"></script>
+<script>
+// Override switchMode for the shared-box layout
+function switchMode(mode) {
+    const cameraMode = document.getElementById('cameraMode');
+    const uploadMode = document.getElementById('uploadMode');
+    const btnUpload  = document.getElementById('btnUpload');
+    const btnCamera  = document.getElementById('btnCamera');
+    const captureBtn = document.getElementById('captureBtn');
+    const retakeBtn  = document.getElementById('retakeBtn');
+    const chooseBtn  = document.getElementById('chooseBtn');
+    const photoInput = document.getElementById('photo');
+
+    if (mode === 'camera') {
+        cameraMode.style.display = 'block';
+        uploadMode.style.display = 'none';
+        btnCamera.classList.add('active');
+        btnUpload.classList.remove('active');
+        chooseBtn.style.display = 'none';
+        captureBtn.style.display = 'inline-block';
+        retakeBtn.style.display = 'none';
+        if (photoInput) photoInput.removeAttribute('required');
+        startCamera();
+    } else {
+        cameraMode.style.display = 'none';
+        uploadMode.style.display = 'flex';
+        btnUpload.classList.add('active');
+        btnCamera.classList.remove('active');
+        captureBtn.style.display = 'none';
+        retakeBtn.style.display = 'none';
+        chooseBtn.style.display = 'inline-block';
+        stopCamera();
+    }
+}
+</script>
 {% endblock %}

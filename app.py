@@ -6,6 +6,7 @@ import base64
 import uuid as uuid_module
 import os 
 from backup import schedule_backups
+from monthly_report import schedule_monthly_report
 from fernet_crypto import encrypt, decrypt
 from io import BytesIO
 from PIL import Image
@@ -17,7 +18,6 @@ from openpyxl.utils import get_column_letter
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from money_detection import detect_money
 from fileinput import filename
 from models import db, Official, Senior, Transaction, ProxyEnrollment
 from blink import detect_blink as check_blink
@@ -37,6 +37,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 db.init_app(app)
 
 schedule_backups()
+schedule_monthly_report(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -646,7 +647,8 @@ def index():
     ).scalar() or 0
 
     claimed_ids = db.session.query(Transaction.senior_id).filter(
-        Transaction.date_released >= cutoff
+        Transaction.date_released >= cutoff,
+        Transaction.status == 'Released'
     ).distinct().all()
     claimed_ids = [c[0] for c in claimed_ids]
     claimed_count = len(claimed_ids)
@@ -655,6 +657,33 @@ def index():
     unclaimed_seniors = Senior.query.filter(
         ~Senior.id.in_(claimed_ids)
     ).all() if claimed_ids else Senior.query.all()
+
+    last_claim_by_senior = {}
+    for t in Transaction.query.filter(Transaction.status == 'Released').all():
+        if t.date_released is None:
+            continue
+        cur = last_claim_by_senior.get(t.senior_id)
+        if cur is None or t.date_released > cur:
+            last_claim_by_senior[t.senior_id] = t.date_released
+
+    priority_list = []
+    for s in unclaimed_seniors:
+        last = last_claim_by_senior.get(s.id)
+        if last is None:
+            days_since = 999
+            last_str = 'Never'
+        else:
+            days_since = max(0, (now - last).days)
+            last_str = last.strftime('%b %d, %Y')
+        age = s.age or 0
+        score = round((days_since * 0.7) + (age * 0.3), 1)
+        priority_list.append({
+            'senior': s,
+            'last_claim_str': last_str,
+            'days_since': days_since,
+            'score': score,
+        })
+    priority_list.sort(key=lambda x: x['score'], reverse=True)
 
     insights = []
     if unclaimed_count > 0:
@@ -674,6 +703,7 @@ def index():
         claimed_count=claimed_count,
         unclaimed_count=unclaimed_count,
         unclaimed_seniors=unclaimed_seniors,
+        priority_list=priority_list,
         insights=insights,
         now=now
     )
@@ -736,7 +766,7 @@ def reset_senior_claim(senior_id):
     ).delete()
     db.session.commit()
     senior = Senior.query.get_or_404(senior_id)
-    flash(f'Claim reset for {senior.full_name}. They can now claim again.')
+    flash(f'Claim reset for {senior.display_name}. They can now claim again.')
     return redirect(url_for('seniors'))
 
 # --- Blink Detection ---
@@ -861,18 +891,6 @@ def fix_captain():
     admin.captain_pin = generate_password_hash('captain1234')
     db.session.commit()
     return {'status': 'done', 'message': 'Admin is now captain with PIN: captain1234'}
-
-@app.route('/detect-money', methods=['POST'])
-@login_required
-def detect_money_route():
-    data = request.get_json()
-    image_data = data.get('image')
-
-    if not image_data or not image_data.startswith('data:image'):
-        return {'detected': False}
-
-    image_bytes = base64.b64decode(image_data.split(',')[1])
-    return detect_money(image_bytes)
 
 @app.route('/admin/reset-captain-pin', methods=['GET', 'POST'])
 @login_required

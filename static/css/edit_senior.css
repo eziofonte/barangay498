@@ -73,3 +73,86 @@
     padding: 12px;
     font-size: 15px;
 }
+
+/* --- Edit-page two-column stretch: right column matches left column height --- */
+.register-layout {
+    align-items: stretch;
+}
+
+.camera-section.visible {
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Photo widget: shared dimensions for both camera & upload modes --- */
+.photo-box {
+    width: 100%;
+    flex: 1;
+    min-height: 320px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+    margin-bottom: 0;
+}
+
+.photo-mode {
+    width: 100%;
+    height: 100%;
+}
+
+.photo-box #regVideo,
+.photo-box #capturedPhoto,
+.photo-box .preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.photo-box #regCanvas {
+    display: none;
+}
+
+.photo-box #uploadMode {
+    background: #f7fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-box #preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.photo-box #preview-placeholder p {
+    color: #a0aec0;
+    font-size: 14px;
+    margin: 0;
+}
+
+.photo-box .preview-icon {
+    color: #a0aec0;
+}
+
+.photo-box .preview-img {
+    display: none;
+}
+
+.photo-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.photo-controls .btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    font-size: 15px;
+}

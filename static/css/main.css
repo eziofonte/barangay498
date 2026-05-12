@@ -8,13 +8,27 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Inter', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f0f4f8;
     color: #2d3748;
     font-size: 16px;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1a202c;
+}
+
+.label, .subtitle, .text-muted, .section-label, .caption {
+    letter-spacing: 0.02em;
 }
 
 /* --- Top Bar --- */
@@ -67,6 +81,7 @@ body {
 .topbar-title h1 {
     font-size: 16px;
     font-weight: 700;
+    color: white;
 }
 
 .topbar-title p {
@@ -128,7 +143,8 @@ body {
 .layout {
     display: flex;
     flex: 1;
-    min-height: calc(100vh - 56px);
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* --- Sidebar --- */
@@ -138,14 +154,14 @@ body {
     box-shadow: 2px 0 8px rgba(0,0,0,0.06);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    position: sticky;
-    top: 56px;
-    height: calc(100vh - 56px);
+    height: 100%;
+    overflow: hidden;
     flex-shrink: 0;
 }
 
 .sidebar nav {
+    flex: 1;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     padding: 16px 12px;
@@ -163,6 +179,7 @@ body {
     font-size: 15px;
     font-weight: 500;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -205,6 +222,7 @@ body {
 }
 
 .sidebar-bottom {
+    flex-shrink: 0;
     padding: 12px;
     border-top: 1px solid #f0f4f8;
 }
@@ -305,6 +323,7 @@ body {
 .main-content {
     flex: 1;
     padding: 28px 32px;
+    height: 100%;
     overflow-y: auto;
 }
 
@@ -369,7 +388,7 @@ body {
     text-decoration: none;
     border: none;
     transition: all 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .btn-primary { background: #1a56a0; color: white; }
@@ -429,7 +448,7 @@ body {
     font-size: 15px;
     color: #2d3748;
     transition: border 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .form-group input:focus,

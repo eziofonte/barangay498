@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — System Prof Elect{% endblock %}
+{% block title %}Dashboard — Barangay 498{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/dashboard.css">
@@ -113,11 +113,44 @@
     </div>
 </div>
 
-<!-- Unclaimed Seniors -->
+<!-- Follow-up Priority + Unclaimed Seniors (side by side) -->
+{% if priority_list or unclaimed_seniors %}
+<div class="dss-two-col" style="margin-top:32px;">
+{% if priority_list %}
+<div class="dss-section">
+    <h3 class="dss-section-title">Follow-up Priority</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Senior Name</th>
+                    <th>Age</th>
+                    <th>Last Claimed</th>
+                    <th>Days Since Last Claim</th>
+                    <th>Priority Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in priority_list %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ item.senior.display_name }}</strong></td>
+                    <td>{{ item.senior.age }}</td>
+                    <td>{{ item.last_claim_str }}</td>
+                    <td>{{ 'Never' if item.days_since == 999 else item.days_since }}</td>
+                    <td><strong>{{ item.score }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 {% if unclaimed_seniors %}
-<div class="dss-section" style="margin-top:32px;">
+<div class="dss-section">
     <h3 class="dss-section-title">Unclaimed Seniors</h3>
-    <p class="dss-section-sub">Seniors who have not claimed in the last 90 days</p>
     <div class="table-wrapper">
         <table>
             <thead>
@@ -133,15 +166,17 @@
                 {% for senior in unclaimed_seniors %}
                 <tr>
                     <td>{{ loop.index }}</td>
-                    <td><strong>{{ senior.full_name }}</strong></td>
+                    <td><strong>{{ senior.display_name }}</strong></td>
                     <td>{{ senior.age }}</td>
-                    <td>{{ senior.address }}</td>
+                    <td>{{ senior.display_address }}</td>
                     <td><a href="/seniors/{{ senior.id }}/edit" class="btn btn-outline btn-sm">View</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
+{% endif %}
 </div>
 {% endif %}
 

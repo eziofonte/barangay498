@@ -143,7 +143,6 @@ function showConfirmation(data) {
     document.getElementById('confirmAge').textContent = 'Age: ' + data.age;
     document.getElementById('confirmAddress').textContent = data.address;
     document.getElementById('confirmRef').textContent = 'Ref: ' + data.reference_number;
-    clearMoneyStatus('moneyStatus');
     overlay.classList.add('visible');
     startReleaseCamera();
     showFixedSignature("Senior's Signature", 'regular');
@@ -181,7 +180,6 @@ function captureReleasePhoto() {
     if (releaseStream) releaseStream.getTracks().forEach(t => t.stop());
     const err = document.getElementById('regularReleaseError');
     if (err) err.style.display = 'none';
-    runMoneyDetection(imageData, 'moneyStatus');
     retakeBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
@@ -190,7 +188,6 @@ function retakeReleasePhoto() {
     document.getElementById('releaseVideo').style.display = 'block';
     document.getElementById('captureReleaseBtn').style.display = 'inline-block';
     document.getElementById('retakeReleaseBtn').style.display = 'none';
-    clearMoneyStatus('moneyStatus');
     startReleaseCamera();
 }
 
@@ -486,14 +483,6 @@ function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captai
     document.getElementById('proxyConfirmSeniorPhoto').src = selectedSenior && selectedSenior.photo ? '/' + selectedSenior.photo.replace(/^\//, '') : '';
     document.getElementById('proxyConfirmProxyName').textContent = proxy_name;
 
-    const facePanel = document.getElementById('proxyFaceComparison');
-    if (facePhoto) {
-        document.getElementById('enrolledFacePhoto').src = '/' + facePhoto;
-        facePanel.style.display = 'block';
-    } else {
-        facePanel.style.display = 'none';
-    }
-
     const mainVideo = document.getElementById('video');
     const proxyCanvas = document.getElementById('proxyVideoCanvas');
     proxyCanvas.width = mainVideo.videoWidth;
@@ -502,7 +491,6 @@ function openProxyConfirmation(senior_id, proxy_name, proxy_relationship, captai
     document.getElementById('proxyConfirmPhoto').style.display = 'none';
     document.getElementById('proxyTakePhotoBtn').style.display = 'inline-block';
     document.getElementById('proxyRetakePhotoBtn').style.display = 'none';
-    clearMoneyStatus('proxyMoneyStatus');
 
     window._proxyMirrorInterval = setInterval(() => {
         if (mainVideo.readyState >= 2) {
@@ -572,7 +560,6 @@ function takeProxyPhoto() {
     document.getElementById('proxyConfirmError').style.display = 'none';
     const releaseErr = document.getElementById('proxyReleaseError');
     if (releaseErr) releaseErr.style.display = 'none';
-    runMoneyDetection(photoData, 'proxyMoneyStatus');
 }
 
 function retakeProxyPhoto() {
@@ -583,7 +570,6 @@ function retakeProxyPhoto() {
 
     document.getElementById('proxyRetakePhotoBtn').style.display = 'none';
     document.getElementById('proxyTakePhotoBtn').style.display = 'inline-block';
-    clearMoneyStatus('proxyMoneyStatus');
 
     const mainVideo = document.getElementById('video');
     const proxyCanvas = document.getElementById('proxyVideoCanvas');
@@ -734,82 +720,3 @@ function getFixedSignatureData() {
     return document.getElementById('fixedSignatureCanvas').toDataURL('image/png');
 }
 
-// --- Money Detection (one-shot per captured photo) ---
-async function runMoneyDetection(imageData, statusId) {
-    const statusBox = document.getElementById(statusId);
-
-    statusBox.className = 'money-status money-panel panel-warn';
-    statusBox.innerHTML = `
-        <div class="money-header">
-            <span class="money-label">Cash Verification</span>
-            <span class="money-total-badge badge-pending">Detecting…</span>
-        </div>`;
-
-    let data;
-    try {
-        const response = await fetch('/detect-money', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: imageData })
-        });
-        data = await response.json();
-    } catch (err) {
-        statusBox.className = 'money-status money-panel panel-warn';
-        statusBox.innerHTML = `
-            <div class="money-header">
-                <span class="money-label">Cash Verification</span>
-                <span class="money-total-badge badge-pending">Error</span>
-            </div>
-            <p class="money-hint hint-warn">Detection failed. Please retake the photo.</p>`;
-        return;
-    }
-
-    const total = data.total || 0;
-    const yellow = data.yellow_count || 0;
-    const blue = data.blue_count || 0;
-    const pct = Math.min(100, Math.round((total / 1500) * 100));
-
-    let hint;
-    if (data.detected) {
-        hint = '<p class="money-hint hint-ok">✓ ₱1,500 verified</p>';
-    } else {
-        const remaining = 1500 - total;
-        let msg;
-        if (total > 1500) msg = `Too much — captured ₱${(total - 1500).toLocaleString()} over ₱1,500`;
-        else if (!total) msg = 'No bills detected — please retake with bills clearly visible';
-        else if (yellow > 0 && !blue) msg = `Need a ₱1,000 bill or ${Math.ceil(remaining / 500)} more ₱500 bill${remaining > 500 ? 's' : ''}`;
-        else if (blue > 0 && !yellow) msg = 'Need a ₱500 bill to reach ₱1,500';
-        else msg = `₱${remaining.toLocaleString()} short of ₱1,500`;
-        hint = `<p class="money-hint hint-warn">${msg}</p>`;
-    }
-
-    statusBox.className = 'money-status money-panel ' + (data.detected ? 'panel-ok' : 'panel-warn');
-    statusBox.innerHTML = `
-        <div class="money-header">
-            <span class="money-label">Cash Verification</span>
-            <span class="money-total-badge ${data.detected ? 'badge-ok' : 'badge-pending'}">₱${total.toLocaleString()} / ₱1,500</span>
-        </div>
-        <div class="money-bills">
-            <div class="money-bill ${yellow > 0 ? 'bill-active' : 'bill-empty'}">
-                <span class="bill-denom">₱500</span>
-                <span class="bill-count">${yellow}×</span>
-            </div>
-            <span class="money-plus">+</span>
-            <div class="money-bill ${blue > 0 ? 'bill-active' : 'bill-empty'}">
-                <span class="bill-denom">₱1,000</span>
-                <span class="bill-count">${blue}×</span>
-            </div>
-        </div>
-        <div class="money-bar-track">
-            <div class="money-bar-fill ${data.detected ? 'bar-complete' : ''}" style="width:${pct}%"></div>
-        </div>
-        ${hint}
-    `;
-}
-
-function clearMoneyStatus(statusId) {
-    const box = document.getElementById(statusId);
-    if (!box) return;
-    box.className = 'money-status';
-    box.innerHTML = '';
-}

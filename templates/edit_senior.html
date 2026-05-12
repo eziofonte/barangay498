@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Edit Senior — System Prof Elect{% endblock %}
+{% block title %}Edit Senior — Barangay 498{% endblock %}
 
 {% block extra_styles %}
 <link rel="stylesheet" href="/static/css/register.css">
@@ -55,25 +55,8 @@
                 <div class="form-group">
                     <label>Replace Photo <span class="optional-hint">(optional)</span></label>
                     <div class="photo-toggle">
-                        <button type="button" class="toggle-btn active" id="btnUpload" onclick="switchMode('upload')">Upload Photo</button>
-                        <button type="button" class="toggle-btn" id="btnCamera" onclick="switchMode('camera')">Use Camera</button>
-                    </div>
-                </div>
-
-                <!-- Upload Mode -->
-                <div id="uploadMode">
-                    <div class="preview" id="preview">
-                        <div class="preview-placeholder" id="preview-placeholder">
-                            <div style="width:40px;height:40px;background:#e2e8f0;border-radius:8px;"></div>
-                            <p>New photo preview will appear here</p>
-                        </div>
-                        <img class="preview-img" id="preview-img" src="" alt="preview" />
-                    </div>
-                    <input type="file" name="photo" id="photo" accept="image/*" data-optional="true" style="display:none;" />
-                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('photo').click()">
-                        <div class="upload-icon">📁</div>
-                        <p class="upload-text">Click to choose a new photo</p>
-                        <p class="upload-subtext">JPG, JPEG, PNG supported · Leave blank to keep current</p>
+                        <button type="button" class="toggle-btn" id="btnUpload" onclick="switchMode('upload')">Upload Photo</button>
+                        <button type="button" class="toggle-btn active" id="btnCamera" onclick="switchMode('camera')">Use Camera</button>
                     </div>
                 </div>
 
@@ -85,17 +68,30 @@
                 </div>
             </div>
 
-            <!-- Right: Camera (shown when camera mode is active) -->
-            <div class="camera-section" id="cameraSection">
-                <div class="camera-preview">
-                    <video id="regVideo" autoplay playsinline></video>
-                    <canvas id="regCanvas"></canvas>
-                    <img id="capturedPhoto" src="" alt="Captured" style="display:none;" />
+            <!-- Right: Shared photo widget (camera or upload preview) -->
+            <div class="camera-section visible" id="cameraSection">
+                <div class="photo-box">
+                    <!-- Camera mode -->
+                    <div id="cameraMode" class="photo-mode">
+                        <video id="regVideo" autoplay playsinline></video>
+                        <canvas id="regCanvas"></canvas>
+                        <img id="capturedPhoto" src="" alt="Captured" />
+                    </div>
+                    <!-- Upload mode -->
+                    <div id="uploadMode" class="photo-mode" style="display:none;">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <img class="preview-icon" src="/static/img/icons/image_icon.svg" alt="" />
+                            <p>New photo preview will appear here</p>
+                        </div>
+                        <img class="preview-img" id="preview-img" src="" alt="preview" />
+                    </div>
                 </div>
-                <div class="camera-controls">
+                <div class="photo-controls">
                     <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">Capture Photo</button>
                     <button type="button" class="btn btn-outline" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
+                    <button type="button" class="btn btn-primary" id="chooseBtn" onclick="document.getElementById('photo').click()" style="display:none;">Choose Photo</button>
                 </div>
+                <input type="file" name="photo" id="photo" accept="image/*" data-optional="true" style="display:none;" />
             </div>
 
         </div>
@@ -105,4 +101,41 @@
 
 {% block scripts %}
 <script src="/static/js/register.js"></script>
+<script>
+// Override switchMode for the edit page's shared-box layout
+function switchMode(mode) {
+    const cameraMode = document.getElementById('cameraMode');
+    const uploadMode = document.getElementById('uploadMode');
+    const btnUpload  = document.getElementById('btnUpload');
+    const btnCamera  = document.getElementById('btnCamera');
+    const captureBtn = document.getElementById('captureBtn');
+    const retakeBtn  = document.getElementById('retakeBtn');
+    const chooseBtn  = document.getElementById('chooseBtn');
+
+    if (mode === 'camera') {
+        cameraMode.style.display = 'block';
+        uploadMode.style.display = 'none';
+        btnCamera.classList.add('active');
+        btnUpload.classList.remove('active');
+        chooseBtn.style.display = 'none';
+        captureBtn.style.display = 'inline-block';
+        retakeBtn.style.display = 'none';
+        startCamera();
+    } else {
+        cameraMode.style.display = 'none';
+        uploadMode.style.display = 'flex';
+        btnUpload.classList.add('active');
+        btnCamera.classList.remove('active');
+        captureBtn.style.display = 'none';
+        retakeBtn.style.display = 'none';
+        chooseBtn.style.display = 'inline-block';
+        stopCamera();
+    }
+}
+
+// Default to camera mode on load
+document.addEventListener('DOMContentLoaded', function () {
+    switchMode('camera');
+});
+</script>
 {% endblock %}

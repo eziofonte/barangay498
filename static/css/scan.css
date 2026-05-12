@@ -142,11 +142,7 @@ video {
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     max-height: 80vh;
     overflow-y: auto;
-    margin-bottom: 280px;
-}
-
-#proxyConfirmModal .confirmation-box {
-    max-width: 600px;
+    margin-bottom: 320px;
 }
 
 .confirmation-box .confirm-photo {
@@ -201,7 +197,7 @@ video {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .btn-confirm:hover { background: #1f4f38; }
@@ -262,6 +258,11 @@ video {
     margin-top: 16px;
 }
 
+#captureReleaseBtn,
+#retakeReleaseBtn {
+    margin-bottom: 12px;
+}
+
 /* --- Proxy Confirmation: side-by-side photo row --- */
 .proxy-photo-row {
     display: flex;
@@ -320,19 +321,56 @@ video {
 }
 
 #fixedSignatureOverlay.proxy-mode {
-    width: 600px;
+    width: 90%;
+    max-width: 480px;
+    padding: 10px 24px;
+}
+
+#fixedSignatureOverlay.proxy-mode #fixedSignatureCanvas {
+    height: 110px;
 }
 
 #fixedSignatureCanvas {
     width: 100%;
     height: 150px;
-    border: 2px solid #e2e8f0;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: #f7fafc;
     cursor: crosshair;
     display: block;
     margin-bottom: 8px;
     touch-action: none;
+}
+
+/* --- Proxy Confirmation Modal: tighter spacing --- */
+#proxyConfirmModal .confirmation-box {
+    padding: 24px 28px;
+    margin-bottom: 240px;
+}
+
+#proxyConfirmModal .confirm-photo {
+    margin-bottom: 10px;
+}
+
+#proxyConfirmModal h3 {
+    margin-bottom: 4px;
+}
+
+#proxyConfirmModal p {
+    margin-bottom: 2px;
+}
+
+#proxyConfirmModal .confirm-amount {
+    margin: 10px 0;
+}
+
+#proxyConfirmModal .release-photo-section {
+    margin: 10px 0 0;
+}
+
+#proxyConfirmModal #proxyTakePhotoBtn,
+#proxyConfirmModal #proxyRetakePhotoBtn {
+    margin-top: 10px;
 }
 
 /* --- Blink Detection --- */
@@ -364,118 +402,3 @@ video {
     color: #c53030;
 }
 
-/* --- Money Detection Panel --- */
-.money-status { display: none; }
-
-.money-panel {
-    margin-top: 10px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: 1.5px solid #e2e8f0;
-    background: #f7fafc;
-    display: block;
-}
-
-.panel-ok   { background: #f0fff4; border-color: #68d391; }
-.panel-warn { background: #fffbeb; border-color: #f6e05e; }
-
-.money-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.money-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #718096;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.money-total-badge {
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-}
-
-.badge-ok      { background: #276749; color: white; }
-.badge-pending { background: #e2e8f0; color: #4a5568; }
-
-.money-bills {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.money-bill {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 6px;
-    border-radius: 8px;
-    border: 1.5px solid #e2e8f0;
-    background: white;
-    transition: all 0.25s;
-}
-
-.bill-active {
-    border-color: #68d391;
-    background: #f0fff4;
-}
-
-.bill-empty { opacity: 0.45; }
-
-.bill-denom {
-    font-size: 11px;
-    font-weight: 700;
-    color: #4a5568;
-    margin-bottom: 2px;
-}
-
-.bill-count {
-    font-size: 22px;
-    font-weight: 800;
-    color: #276749;
-    line-height: 1;
-}
-
-.bill-empty .bill-count { color: #a0aec0; }
-
-.money-plus {
-    font-size: 16px;
-    font-weight: 700;
-    color: #cbd5e0;
-    flex-shrink: 0;
-}
-
-.money-bar-track {
-    background: #e2e8f0;
-    border-radius: 99px;
-    height: 5px;
-    overflow: hidden;
-    margin-bottom: 8px;
-}
-
-.money-bar-fill {
-    height: 100%;
-    background: #f6ad55;
-    border-radius: 99px;
-    transition: width 0.35s ease;
-}
-
-.bar-complete { background: #48bb78; }
-
-.money-hint {
-    font-size: 12px;
-    text-align: center;
-    margin: 0;
-    font-weight: 500;
-}
-
-.hint-ok   { color: #276749; }
-.hint-warn { color: #92400e; }

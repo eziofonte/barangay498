@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}System Prof Elect{% endblock %}</title>
+    <title>{% block title %}Barangay 498{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icons/barangay-logo.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
     {% block extra_styles %}{% endblock %}
 </head>
@@ -56,7 +58,7 @@
         </a>
         {% if current_user.role in ('captain', 'admin') %}
         <a href="/proxy-management" class="nav-item {% if request.path == '/proxy-management' %}active{% endif %}">
-            <div class="nav-icon-placeholder"></div>
+            <img src="/static/img/icons/proxy_management_icon.svg" class="nav-icon" alt="Proxy Management" />
             <span>Proxy Management</span>
         </a>
         {% endif %}
@@ -65,8 +67,7 @@
         <div class="user-profile-card">
             <div class="user-avatar">{{ current_user.name[:1]|upper }}</div>
             <div class="user-profile-info">
-                <p class="user-profile-name" title="{{ current_user.name }}">{{ current_user.name }}</p>
-                <span class="user-role-pill role-{{ current_user.role }}">{{ current_user.role|title }}</span>
+                <p class="user-profile-name" title="{{ current_user.name }}">{{ current_user.name.split(' ')[0] }}</p>
             </div>
         </div>
         <a href="/logout" class="nav-item logout">
