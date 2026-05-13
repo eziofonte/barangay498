@@ -111,7 +111,7 @@ function changeAge(delta) {
     const input = document.getElementById('ageInput');
     const current = parseInt(input.value) || 60;
     const newVal = current + delta;
-    if (newVal >= 60) {
+    if (newVal >= 60 && newVal <= 130) {
         input.value = newVal;
     }
 }

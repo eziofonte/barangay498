@@ -42,35 +42,33 @@
             <video id="releaseVideo" autoplay playsinline></video>
             <canvas id="releaseCanvas"></canvas>
             <img id="releaseCaptured" alt="Release Photo" />
-            <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:16px;">Take Photo</button>
-            <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:16px;">Retake</button>
+            <button type="button" class="btn btn-outline btn-sm" id="captureReleaseBtn" onclick="captureReleasePhoto()" style="margin-top:8px;">Take Photo</button>
+            <button type="button" class="btn btn-outline btn-sm" id="retakeReleaseBtn" onclick="retakeReleasePhoto()" style="display:none;margin-top:8px;">Retake</button>
         </div>
         <div id="regularReleaseError" style="display:none;color:#c53030;font-size:14px;margin-top:8px;text-align:left;">
             Please take a live photo first.
         </div>
-        <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>
 </div>
 
 <!-- Proxy Release Modal -->
 <div class="confirmation-overlay" id="proxyModal">
     <div class="confirmation-box">
-        <h3 style="color:#1a365d;margin-bottom:6px;">Proxy Release</h3>
-        <p style="color:#718096;font-size:14px;margin-bottom:20px;">For bedridden seniors — requires Captain authorization</p>
+        <h3 style="color:#1a365d;margin-bottom:20px;">Proxy Release</h3>
 
         <!-- 1. Select Senior -->
         <div class="form-group">
             <label class="section-label">Select Senior Citizen</label>
-            <select id="proxySeniorSelect" onchange="loadEnrolledProxies()" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
-                <option value="">-- Select Senior --</option>
+            <select id="proxySeniorSelect" class="proxy-select" onchange="loadEnrolledProxies()">
+                <option value="" disabled selected hidden>Choose a senior citizen...</option>
             </select>
         </div>
 
         <!-- 2. Select Enrolled Proxy (shown after senior selected) -->
         <div class="form-group" id="proxySelectGroup" style="display:none;margin-top:14px;">
             <label class="section-label">Select Proxy</label>
-            <select id="proxyEnrollmentSelect" onchange="handleProxySelection()" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;font-family:inherit;">
-                <option value="">-- Select --</option>
+            <select id="proxyEnrollmentSelect" class="proxy-select" onchange="handleProxySelection()">
+                <option value="" disabled selected hidden>Choose a proxy...</option>
             </select>
         </div>
 
@@ -132,12 +130,12 @@
             Please take a live photo first.
         </div>
         <div id="proxyConfirmError" style="display:none;color:#c53030;font-size:14px;margin-top:10px;"></div>
-        <p style="font-size:13px;color:#718096;margin-top:12px;">Sign on the pad below then click Confirm Release.</p>
     </div>
 </div>
 
 <!-- Fixed Signature Pad — always same position -->
 <div id="fixedSignatureOverlay">
+    <p style="font-size:13px;color:#ffffff;margin-bottom:8px;">Sign on the pad below then click Confirm Release.</p>
     <p class="section-label" id="fixedSignatureLabel">Signature</p>
     <canvas id="fixedSignatureCanvas"></canvas>
     <div style="display:flex;gap:8px;margin-bottom:8px;">

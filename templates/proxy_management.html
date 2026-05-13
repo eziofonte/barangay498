@@ -153,21 +153,41 @@
             <div class="upload-row">
                 <div class="form-group">
                     <label>ID Photo <span class="required-star">*</span></label>
-                    <div class="upload-box" onclick="document.getElementById('idPhotoInput').click()">
+                    <div class="photo-mode-toggle" id="idModeToggle">
+                        <button type="button" class="mode-btn active" data-mode="upload" onclick="setPhotoMode('id', 'upload')">Upload</button>
+                        <button type="button" class="mode-btn" data-mode="camera" onclick="setPhotoMode('id', 'camera')">Take Photo</button>
+                    </div>
+                    <div class="upload-box" id="idUploadBox" onclick="document.getElementById('idPhotoInput').click()">
                         <img id="idPhotoPreview" class="upload-preview" alt="" />
                         <p id="idPhotoLabel">Click to upload</p>
                     </div>
+                    <div class="camera-box" id="idCameraBox" style="display:none;" onclick="handleCameraClick('id')">
+                        <video id="idVideo" autoplay playsinline muted style="display:none;"></video>
+                        <img id="idCapturePreview" class="capture-preview" alt="" />
+                    </div>
+                    <p class="camera-hint" id="idCameraLabel" style="display:none;">Click to capture</p>
+                    <canvas id="idCanvas" style="display:none;"></canvas>
                     <input type="file" id="idPhotoInput" name="id_photo" accept="image/*" style="display:none;"
-                           onchange="previewUpload(this, 'idPhotoPreview', 'idPhotoLabel')" required />
+                           onchange="previewUpload(this, 'idPhotoPreview', 'idPhotoLabel'); clearCapture('id')" required />
                 </div>
                 <div class="form-group">
-                    <label>Face Photo <span class="optional-label">(optional)</span></label>
-                    <div class="upload-box" onclick="document.getElementById('facePhotoInput').click()">
+                    <label>Face Photo <span class="required-star">*</span></label>
+                    <div class="photo-mode-toggle" id="faceModeToggle">
+                        <button type="button" class="mode-btn active" data-mode="upload" onclick="setPhotoMode('face', 'upload')">Upload</button>
+                        <button type="button" class="mode-btn" data-mode="camera" onclick="setPhotoMode('face', 'camera')">Take Photo</button>
+                    </div>
+                    <div class="upload-box" id="faceUploadBox" onclick="document.getElementById('facePhotoInput').click()">
                         <img id="facePhotoPreview" class="upload-preview" alt="" />
                         <p id="facePhotoLabel">Click to upload</p>
                     </div>
+                    <div class="camera-box" id="faceCameraBox" style="display:none;" onclick="handleCameraClick('face')">
+                        <video id="faceVideo" autoplay playsinline muted style="display:none;"></video>
+                        <img id="faceCapturePreview" class="capture-preview" alt="" />
+                    </div>
+                    <p class="camera-hint" id="faceCameraLabel" style="display:none;">Click to capture</p>
+                    <canvas id="faceCanvas" style="display:none;"></canvas>
                     <input type="file" id="facePhotoInput" name="face_photo" accept="image/*" style="display:none;"
-                           onchange="previewUpload(this, 'facePhotoPreview', 'facePhotoLabel')" />
+                           onchange="previewUpload(this, 'facePhotoPreview', 'facePhotoLabel'); clearCapture('face')" required />
                 </div>
             </div>
 
@@ -184,12 +204,19 @@
 
 {% block scripts %}
 <script>
+let sharedStream = null;
+let cameraUsers = new Set();
+let capturedState = { id: false, face: false };
+
 function openEnrollModal() {
     document.getElementById('enrollOverlay').classList.add('visible');
 }
+
 function closeEnrollModal() {
     document.getElementById('enrollOverlay').classList.remove('visible');
+    stopAllCameras();
 }
+
 function previewUpload(input, previewId, labelId) {
     const file = input.files[0];
     if (!file) return;
@@ -203,7 +230,153 @@ function previewUpload(input, previewId, labelId) {
     };
     reader.readAsDataURL(file);
 }
-// Close modal when clicking backdrop
+
+function clearCapture(field) {
+    capturedState[field] = false;
+    document.getElementById(field + 'CapturePreview').style.display = 'none';
+    const label = document.getElementById(field + 'CameraLabel');
+    label.textContent = 'Click to capture';
+    label.style.display = '';
+}
+
+function setPhotoMode(field, mode) {
+    const toggleDiv = document.getElementById(field + 'ModeToggle');
+    toggleDiv.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    const uploadBox = document.getElementById(field + 'UploadBox');
+    const cameraBox = document.getElementById(field + 'CameraBox');
+    const cameraHint = document.getElementById(field + 'CameraLabel');
+    if (mode === 'upload') {
+        uploadBox.style.display = '';
+        cameraBox.style.display = 'none';
+        cameraHint.style.display = 'none';
+        stopCameraForField(field);
+    } else {
+        uploadBox.style.display = 'none';
+        cameraBox.style.display = '';
+        cameraHint.style.display = '';
+        startCameraForField(field);
+    }
+}
+
+async function startCameraForField(field) {
+    const video = document.getElementById(field + 'Video');
+    const capturePreview = document.getElementById(field + 'CapturePreview');
+    const label = document.getElementById(field + 'CameraLabel');
+
+    if (capturedState[field]) {
+        video.style.display = 'none';
+        capturePreview.style.display = 'block';
+        label.style.display = 'none';
+        return;
+    }
+
+    try {
+        if (!sharedStream || !sharedStream.active) {
+            sharedStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        cameraUsers.add(field);
+        video.srcObject = sharedStream;
+        video.style.display = 'block';
+        capturePreview.style.display = 'none';
+        label.textContent = 'Click to capture';
+        label.style.display = 'block';
+    } catch (err) {
+        label.textContent = 'Camera unavailable';
+        label.style.display = 'block';
+        video.style.display = 'none';
+    }
+}
+
+function stopCameraForField(field) {
+    cameraUsers.delete(field);
+    const video = document.getElementById(field + 'Video');
+    if (video) video.srcObject = null;
+    if (cameraUsers.size === 0 && sharedStream) {
+        sharedStream.getTracks().forEach(t => t.stop());
+        sharedStream = null;
+    }
+}
+
+function stopAllCameras() {
+    ['id', 'face'].forEach(field => {
+        const video = document.getElementById(field + 'Video');
+        if (video) video.srcObject = null;
+    });
+    cameraUsers.clear();
+    if (sharedStream) {
+        sharedStream.getTracks().forEach(t => t.stop());
+        sharedStream = null;
+    }
+}
+
+function handleCameraClick(field) {
+    if (capturedState[field]) {
+        retakePhoto(field);
+    } else {
+        capturePhoto(field);
+    }
+}
+
+function capturePhoto(field) {
+    const video = document.getElementById(field + 'Video');
+    const canvas = document.getElementById(field + 'Canvas');
+    const capturePreview = document.getElementById(field + 'CapturePreview');
+    const label = document.getElementById(field + 'CameraLabel');
+    const inputId = field === 'id' ? 'idPhotoInput' : 'facePhotoInput';
+    const input = document.getElementById(inputId);
+
+    if (!video.srcObject || video.readyState < 2) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    capturePreview.src = dataUrl;
+    capturePreview.style.display = 'block';
+    video.style.display = 'none';
+    label.style.display = 'none';
+    capturedState[field] = true;
+
+    const uploadPreview = document.getElementById(field + 'PhotoPreview');
+    const uploadLabel = document.getElementById(field + 'PhotoLabel');
+    uploadPreview.src = dataUrl;
+    uploadPreview.style.display = 'block';
+    uploadLabel.style.display = 'none';
+
+    canvas.toBlob(blob => {
+        const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+    }, 'image/jpeg', 0.9);
+}
+
+async function retakePhoto(field) {
+    const video = document.getElementById(field + 'Video');
+    const capturePreview = document.getElementById(field + 'CapturePreview');
+    const label = document.getElementById(field + 'CameraLabel');
+
+    capturedState[field] = false;
+    capturePreview.style.display = 'none';
+
+    try {
+        if (!sharedStream || !sharedStream.active) {
+            sharedStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        cameraUsers.add(field);
+        video.srcObject = sharedStream;
+        video.style.display = 'block';
+        label.textContent = 'Click to capture';
+        label.style.display = 'block';
+    } catch (err) {
+        label.textContent = 'Camera unavailable';
+        label.style.display = 'block';
+    }
+}
+
 document.getElementById('enrollOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeEnrollModal();
 });

@@ -134,7 +134,7 @@ video {
 .confirmation-box {
     background: white;
     border-radius: 16px;
-    padding: 40px;
+    padding: 24px 28px;
     max-width: 480px;
     width: 90%;
     margin: auto;
@@ -151,27 +151,27 @@ video {
     border-radius: 50%;
     object-fit: cover;
     border: 4px solid #9ae6b4;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .confirmation-box h3 {
     font-size: 22px;
     font-weight: 700;
     color: #1a365d;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .confirmation-box p {
     font-size: 15px;
     color: #718096;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .confirm-amount {
     font-size: 28px;
     font-weight: 700;
     color: #276749;
-    margin: 16px 0;
+    margin: 10px 0;
 }
 
 .confirm-actions {
@@ -211,7 +211,7 @@ video {
 .ref-number {
     font-size: 13px;
     color: #718096;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 .section-label {
@@ -225,23 +225,33 @@ video {
 
 /* --- Release Photo --- */
 .release-photo-section {
-    margin: 16px 0;
+    margin: 8px 0;
     text-align: left;
 }
 
 .release-photo-section video,
 .release-photo-section canvas {
     width: 100%;
-    height: 180px;
+    height: 175px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     object-fit: cover;
     background: #000;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
-#releaseCaptured,
+#releaseCaptured {
+    width: 100%;
+    height: 175px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    object-fit: cover;
+    background: #f7fafc;
+    display: none;
+    margin-bottom: 6px;
+}
+
 #proxyConfirmPhoto {
     width: 100%;
     height: 180px;
@@ -260,7 +270,7 @@ video {
 
 #captureReleaseBtn,
 #retakeReleaseBtn {
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 /* --- Proxy Confirmation: side-by-side photo row --- */
@@ -304,16 +314,25 @@ video {
     box-sizing: border-box;
     background: white;
     border-radius: 12px;
-    padding: 16px 40px;
+    padding: 12px 28px;
     box-shadow: none;
     z-index: 10000;
     text-align: left;
 }
 
-/* Regular release: match the regular confirmation-box width/padding */
+/* Regular release: match the regular confirmation-box width/padding,
+   and flatten the top edge so it visually conjoins with the modal box above. */
 #fixedSignatureOverlay:not(.proxy-mode) {
     width: 90%;
     max-width: 480px;
+    border-radius: 0 0 12px 12px;
+}
+
+/* Regular release modal: flatten the bottom edge and pull down so it sits
+   flush against the signature overlay, making them read as one unified panel. */
+#confirmationOverlay .confirmation-box {
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 290px;
 }
 
 #fixedSignatureOverlay.visible {
@@ -323,7 +342,7 @@ video {
 #fixedSignatureOverlay.proxy-mode {
     width: 90%;
     max-width: 480px;
-    padding: 10px 24px;
+    padding: 10px 28px;
 }
 
 #fixedSignatureOverlay.proxy-mode #fixedSignatureCanvas {
@@ -332,13 +351,13 @@ video {
 
 #fixedSignatureCanvas {
     width: 100%;
-    height: 150px;
+    height: 120px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: #f7fafc;
     cursor: crosshair;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     touch-action: none;
 }
 
@@ -371,6 +390,49 @@ video {
 #proxyConfirmModal #proxyTakePhotoBtn,
 #proxyConfirmModal #proxyRetakePhotoBtn {
     margin-top: 10px;
+}
+
+/* --- Custom-styled selects (Proxy Release modal) --- */
+.proxy-select {
+    width: 100%;
+    padding: 10px 38px 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1a365d;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M5 8l5 5 5-5' stroke='%23718096' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.proxy-select:focus {
+    outline: none;
+    border-color: #1a56a0;
+    box-shadow: 0 0 0 3px rgba(26, 86, 160, 0.1);
+}
+
+.proxy-select:hover {
+    border-color: #cbd5e0;
+}
+
+.proxy-select:required:invalid {
+    color: #a0aec0;
+}
+
+.proxy-select option {
+    color: #1a365d;
+}
+
+.proxy-select option[disabled] {
+    color: #a0aec0;
 }
 
 /* --- Blink Detection --- */

@@ -309,7 +309,6 @@ def recognize():
 
     return {'status': 'no_match', 'message': 'No matching senior found.'}
 
-# --- Transaction History ---
 @app.route('/history')
 @login_required
 def history():
@@ -318,12 +317,9 @@ def history():
 
     query = Transaction.query.join(Senior)
 
-    if search:
-        query = query.filter(Senior.full_name.ilike(f'%{search}%'))
-
     if date_filter:
-        from datetime import datetime
         try:
+            from datetime import datetime
             filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
             query = query.filter(
                 db.func.date(Transaction.date_released) == filter_date.date()
@@ -332,6 +328,14 @@ def history():
             pass
 
     transactions = query.order_by(Transaction.date_released.desc()).all()
+
+    # Filter by name AFTER decryption (since names are encrypted)
+    if search:
+        transactions = [
+            t for t in transactions
+            if search.lower() in t.senior.display_name.lower()
+        ]
+
     return render_template('history.html', transactions=transactions, search=search, date_filter=date_filter)
 
 # --- Export Analytics Report (Excel) ---
@@ -601,6 +605,7 @@ def edit_senior(senior_id):
 def delete_senior(senior_id):
     senior = Senior.query.get_or_404(senior_id)
     Transaction.query.filter_by(senior_id=senior.id).delete()
+    ProxyEnrollment.query.filter_by(senior_id=senior.id).delete()
     db.session.delete(senior)
     db.session.commit()
     flash('Senior removed from the system.', 'info')
@@ -966,6 +971,10 @@ def enroll_proxy():
 
     if not id_photo_path:
         flash('ID photo is required.', 'error')
+        return redirect(url_for('proxy_management'))
+
+    if not face_photo_path:
+        flash('Face photo is required.', 'error')
         return redirect(url_for('proxy_management'))
 
     enrollment = ProxyEnrollment(

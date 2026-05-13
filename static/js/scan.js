@@ -47,16 +47,16 @@ function startBlinkDetection() {
             const data = await response.json();
 
             if (!data.face) {
-                status.textContent = '⚠ No face detected. Please position yourself in front of the camera.';
+                status.textContent = 'No face detected. Please position yourself in front of the camera.';
                 status.className = 'blink-status blink-warning';
             } else if (data.blink) {
                 clearInterval(blinkCheckInterval);
                 blinkDetected = true;
-                status.textContent = '✓ Blink detected! You may now scan.';
+                status.textContent = 'Blink detected! You may now scan.';
                 status.className = 'blink-status blink-success';
                 scanBtn.disabled = false;
             } else {
-                status.textContent = '👁 Please blink to verify you are present...';
+                status.textContent = 'Please blink to verify you are present...';
                 status.className = 'blink-status blink-waiting';
             }
         } catch (err) {
@@ -326,7 +326,7 @@ async function openProxyModal() {
     const response = await fetch('/seniors-list');
     const data = await response.json();
     const select = document.getElementById('proxySeniorSelect');
-    select.innerHTML = '<option value="">-- Select Senior --</option>';
+    select.innerHTML = '<option value="" disabled selected hidden>Choose a senior citizen...</option>';
     window._seniorsList = data.seniors;
     data.seniors.forEach(s => {
         select.innerHTML += `<option value="${s.id}">${s.name} (Age: ${s.age})</option>`;
@@ -367,11 +367,10 @@ async function loadEnrolledProxies() {
     window._enrolledProxies = data.proxies || [];
 
     const select = document.getElementById('proxyEnrollmentSelect');
-    select.innerHTML = '<option value="">-- Select --</option>';
+    select.innerHTML = '<option value="" disabled selected hidden>Choose a proxy...</option>';
     window._enrolledProxies.forEach(p => {
         select.innerHTML += `<option value="${p.id}">${p.full_name} (${p.relationship})</option>`;
     });
-    select.innerHTML += '<option value="walkin">Walk-in (not pre-enrolled)</option>';
 
     selectGroup.style.display = 'block';
 }
@@ -413,7 +412,7 @@ async function submitProxyRelease() {
         return;
     }
     if (!enrollmentValue) {
-        errorBox.textContent = 'Please select a proxy or choose Walk-in.';
+        errorBox.textContent = 'Please select a proxy.';
         errorBox.style.display = 'block';
         return;
     }

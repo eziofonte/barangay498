@@ -19,7 +19,7 @@ def run_backup():
         backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
 
         shutil.copy2(DB_PATH, backup_path)
-        print(f'✅ Backup saved: {backup_filename}')
+        print(f'Backup saved: {backup_filename}')
 
         # Delete oldest backups if over limit
         backups = sorted([
@@ -28,17 +28,17 @@ def run_backup():
         while len(backups) > MAX_BACKUPS:
             oldest = backups.pop(0)
             os.remove(os.path.join(BACKUP_FOLDER, oldest))
-            print(f'🗑 Deleted old backup: {oldest}')
+            print(f'Deleted old backup: {oldest}')
 
     except Exception as e:
-        print(f'⚠ Backup failed: {e}')
+        print(f'Backup failed: {e}')
 
 def schedule_backups():
     def loop():
         while True:
             run_backup()
             threading.Event().wait(INTERVAL_SECONDS)
-    
+
     thread = threading.Thread(target=loop, daemon=True)
     thread.start()
-    print('🔁 Automatic backup scheduler started (every 2 weeks)')
+    print('Automatic backup scheduler started (every 2 weeks)')

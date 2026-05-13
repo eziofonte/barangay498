@@ -7,7 +7,8 @@
       "Bash(cp -r \"C:/Users/dwayn/Documents/VS/System Prof Elect/static/img/.\" \"C:/Users/dwayn/Documents/VS/System Prof Elect/bundle/app/static/img/\")",
       "PowerShell($libPath = \\(Resolve-Path \"bundle\\\\app\\\\Lib\"\\).Path; $env:PYTHONPATH = $libPath; .\\\\bundle\\\\python\\\\python.exe -c \"import importlib, sys; sys.path = [r'$libPath']; mods = ['flask','flask_sqlalchemy','flask_login','werkzeug','PIL','numpy','openpyxl','cryptography','cv2','dlib','scipy','scipy.spatial','face_recognition','face_recognition_models']; [print\\(f'OK  {m}' if importlib.import_module\\(m\\) else f'FAIL {m}'\\) for m in mods]\")",
       "Bash(python -c \"import monthly_report; print\\('monthly_report OK'\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
     ]
   }
 }
